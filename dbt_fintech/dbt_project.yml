@@ -22,5 +22,5 @@ models:
     intermediate:
       +materialized: table
 
-    mrt:
+    mart:
       +materialized: view
