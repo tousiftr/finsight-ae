@@ -1,0 +1,96 @@
+name: finsight-superset
+
+x-superset-env: &superset-env
+  SUPERSET_ENV: development
+  SUPERSET_LOAD_EXAMPLES: "no"
+  SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:?Set SUPERSET_SECRET_KEY in your local .env file}
+  SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+  SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME:-admin}
+  SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-admin}
+  SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-admin@finsight.local}
+  SUPERSET_METADATA_DB_HOST: superset-db
+  SUPERSET_METADATA_DB_PORT: 5432
+  SUPERSET_METADATA_DB_NAME: ${SUPERSET_METADATA_DB_NAME:-superset}
+  SUPERSET_METADATA_DB_USER: ${SUPERSET_METADATA_DB_USER:-superset}
+  SUPERSET_METADATA_DB_PASSWORD: ${SUPERSET_METADATA_DB_PASSWORD:-superset}
+  REDIS_HOST: superset-redis
+  REDIS_PORT: 6379
+
+services:
+  superset-db:
+    image: postgres:16-alpine
+    container_name: finsight-superset-db
+    environment:
+      POSTGRES_DB: ${SUPERSET_METADATA_DB_NAME:-superset}
+      POSTGRES_USER: ${SUPERSET_METADATA_DB_USER:-superset}
+      POSTGRES_PASSWORD: ${SUPERSET_METADATA_DB_PASSWORD:-superset}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - superset_metadata:/var/lib/postgresql/data
+
+  superset-redis:
+    image: redis:7-alpine
+    container_name: finsight-superset-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - superset_redis:/data
+
+  superset-init:
+    build:
+      context: ./superset
+    image: finsight-superset:local
+    container_name: finsight-superset-init
+    depends_on:
+      superset-db:
+        condition: service_healthy
+      superset-redis:
+        condition: service_healthy
+    environment:
+      <<: *superset-env
+    volumes:
+      - superset_home:/app/superset_home
+      - ./superset/config:/app/pythonpath:ro
+    command: >
+      /bin/bash -c "
+      superset db upgrade &&
+      superset fab create-admin
+      --username \"$${SUPERSET_ADMIN_USERNAME}\"
+      --firstname Superset
+      --lastname Admin
+      --email \"$${SUPERSET_ADMIN_EMAIL}\"
+      --password \"$${SUPERSET_ADMIN_PASSWORD}\" || true &&
+      superset init
+      "
+    restart: "no"
+
+  superset:
+    build:
+      context: ./superset
+    image: finsight-superset:local
+    container_name: finsight-superset-app
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *superset-env
+    ports:
+      - "${SUPERSET_PORT:-8088}:8088"
+    volumes:
+      - superset_home:/app/superset_home
+      - ./superset/config:/app/pythonpath:ro
+    command: >
+      /bin/bash -c "superset run -h 0.0.0.0 -p 8088"
+    restart: unless-stopped
+
+volumes:
+  superset_metadata:
+  superset_redis:
+  superset_home:

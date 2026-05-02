@@ -6,7 +6,7 @@ models:
       - name: transaction_id
         tests: [not_null]
 
-  - name: mrt_rp__daily_kpis
+  - name: mrt_rp_daily_kpis
     columns:
       - name: transaction_date
         tests: [not_null]
