@@ -22,22 +22,11 @@ DELETE_ORDER = [
     ("raw", "raw_customers"),
 ]
 
-
-META_FILLERS = {
-    "batch_id": lambda ctx: ctx["batch_id"],
-    "dt": lambda ctx: ctx["dt"],
-    "source_bucket": lambda _ctx: "local",
-    "source_object_key": lambda ctx: ctx["source_file_path"],
-    "source_file_path": lambda ctx: ctx["source_file_path"],
-    "raw_file_path": lambda ctx: ctx["source_file_path"],
-    "source_system": lambda _ctx: "local",
-    "payload": lambda ctx: json.dumps(ctx["record"], sort_keys=True, separators=(",", ":")),
-    "raw_record_hash": lambda ctx: calculate_raw_record_hash(ctx["record"]),
-    "loaded_at": lambda ctx: ctx["now_utc"],
-    "ingested_at": lambda ctx: ctx["now_utc"],
-    "created_at": lambda ctx: parse_timestamp(ctx["record"].get("created_at"), ctx["now_utc"]),
-    "updated_at": lambda ctx: parse_timestamp(ctx["record"].get("updated_at"), ctx["now_utc"]),
-}
+LOAD_ORDER = [
+    ("customers", "raw", "raw_customers", "customers.jsonl", "customer_id"),
+    ("accounts", "raw", "raw_accounts", "accounts.jsonl", "account_id"),
+    ("transactions", "raw", "raw_transactions", "transactions.jsonl", "transaction_id"),
+]
 
 RAW_ID_SPECS = {
     "raw_customer_id": ("customers", "customer_id", "raw_cust_"),
@@ -45,15 +34,47 @@ RAW_ID_SPECS = {
     "raw_transaction_id": ("transactions", "transaction_id", "raw_txn_"),
 }
 
-TEXT_TYPES = {"text", "character varying", "character", "varchar", "bpchar"}
-INTEGER_TYPES = {"integer", "bigint", "int4", "int8"}
+TEXT_TYPES = {
+    "text",
+    "character varying",
+    "character",
+    "varchar",
+    "bpchar",
+}
+
+INTEGER_TYPES = {
+    "integer",
+    "bigint",
+    "smallint",
+    "int2",
+    "int4",
+    "int8",
+}
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Load one local partitioned FinSight raw batch into Neon Postgres.")
-    parser.add_argument("--dt", required=True, help="Partition date (YYYY-MM-DD)")
-    parser.add_argument("--batch-id", required=True, help="Batch ID (e.g., 20260502_1436)")
-    parser.add_argument("--base-dir", default="data/raw", help="Root directory containing raw partitioned JSONL files")
+    parser = argparse.ArgumentParser(
+        description="Load one local partitioned FinSight raw batch into Neon Postgres."
+    )
+
+    parser.add_argument(
+        "--dt",
+        required=True,
+        help="Partition date, example: 2026-05-02",
+    )
+
+    parser.add_argument(
+        "--batch-id",
+        required=True,
+        help="Batch ID, example: 20260502_1436",
+    )
+
+    parser.add_argument(
+        "--base-dir",
+        default="data/raw",
+        help="Root directory containing raw partitioned JSONL files",
+    )
+
     return parser.parse_args()
 
 
@@ -64,13 +85,17 @@ def load_project_env() -> None:
 
 
 def get_neon_connection():
-    database_url = os.getenv("DATABASE_URL")
+    database_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
+
     if not database_url:
-        raise RuntimeError("Missing required environment variable: DATABASE_URL")
+        raise RuntimeError(
+            "Missing required environment variable: DATABASE_URL or NEON_DATABASE_URL"
+        )
 
     parsed = urlparse(database_url)
     host = parsed.hostname or ""
     database = unquote(parsed.path.lstrip("/"))
+
     print(f"Connecting to Neon host={host} db={database}")
 
     return pg8000.dbapi.connect(
@@ -83,160 +108,379 @@ def get_neon_connection():
     )
 
 
-def resolve_file_path(base_dir: Path, entity: str, dt: str, batch_id: str, file_name: str) -> Path:
+def resolve_file_path(
+    base_dir: Path,
+    entity: str,
+    dt: str,
+    batch_id: str,
+    file_name: str,
+) -> Path:
     return base_dir / entity / f"dt={dt}" / f"batch_id={batch_id}" / file_name
+
+
+def normalize_path(path: Path) -> str:
+    return str(path).replace("\\", "/")
 
 
 def read_jsonl_records(file_path: Path, id_field: str) -> list[dict]:
     if not file_path.exists():
         raise FileNotFoundError(f"Required file is missing: {file_path}")
+
+    if file_path.stat().st_size == 0:
+        raise ValueError(f"Required file is empty: {file_path}")
+
     records = []
-    with file_path.open("r", encoding="utf-8") as f:
-        for line_number, line in enumerate(f, start=1):
+
+    with file_path.open("r", encoding="utf-8") as file:
+        for line_number, line in enumerate(file, start=1):
             stripped = line.strip()
+
             if not stripped:
                 continue
+
             try:
                 record = json.loads(stripped)
             except json.JSONDecodeError as exc:
-                raise ValueError(f"Invalid JSON in {file_path} line {line_number}: {exc}") from exc
-            if id_field not in record:
-                raise ValueError(f"Missing required field '{id_field}' in {file_path} line {line_number}")
+                raise ValueError(
+                    f"Invalid JSON in {file_path} line {line_number}: {exc}"
+                ) from exc
+
+            if id_field not in record or record.get(id_field) is None:
+                raise ValueError(
+                    f"Missing required field '{id_field}' in {file_path} line {line_number}"
+                )
+
             record[id_field] = str(record[id_field])
             records.append(record)
+
     if not records:
-        raise ValueError(f"Required file is empty (or only blank lines): {file_path}")
+        raise ValueError(f"Required file has no JSON rows: {file_path}")
+
     return records
 
 
 def calculate_raw_record_hash(record: dict) -> str:
-    canonical_json = json.dumps(record, sort_keys=True, separators=(",", ":"))
+    canonical_json = json.dumps(
+        record,
+        sort_keys=True,
+        default=str,
+        separators=(",", ":"),
+    )
     return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 
-def build_raw_ingestion_id(entity: str, batch_id: str, business_id: str, prefix: str) -> str:
+def build_raw_ingestion_id(
+    entity: str,
+    batch_id: str,
+    business_id: str,
+    prefix: str,
+) -> str:
     seed = f"{entity}|{batch_id}|{business_id}"
     digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:32]
     return f"{prefix}{digest}"
 
 
 def parse_timestamp(value, fallback: datetime):
-    if not value:
+    if value is None or value == "":
         return fallback
+
     if isinstance(value, datetime):
         return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
     if isinstance(value, str):
-        val = value.strip()
-        if val.endswith("Z"):
-            val = val[:-1] + "+00:00"
+        cleaned = value.strip()
+
+        if cleaned.endswith("Z"):
+            cleaned = cleaned[:-1] + "+00:00"
+
         try:
-            parsed = datetime.fromisoformat(val)
+            parsed = datetime.fromisoformat(cleaned)
             return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         except ValueError:
             return fallback
+
     return fallback
 
 
 def get_table_columns(conn, schema: str, table: str) -> list[dict]:
     sql = """
-    select
-        column_name,
-        is_nullable,
-        column_default,
-        data_type,
-        udt_name
-    from information_schema.columns
-    where table_schema = %s and table_name = %s
-    order by ordinal_position
+        select
+            column_name,
+            is_nullable,
+            column_default,
+            data_type,
+            udt_name
+        from information_schema.columns
+        where table_schema = %s
+          and table_name = %s
+        order by ordinal_position;
     """
+
     cur = conn.cursor()
+
     try:
         cur.execute(sql, (schema, table))
         rows = cur.fetchall()
     finally:
         cur.close()
+
     if not rows:
         raise RuntimeError(f"Table not found: {schema}.{table}")
+
     return [
         {
-            "name": r[0],
-            "is_nullable": r[1] == "YES",
-            "has_default": r[2] is not None,
-            "data_type": r[3],
-            "udt_name": r[4],
+            "name": row[0],
+            "is_nullable": row[1] == "YES",
+            "has_default": row[2] is not None,
+            "data_type": row[3],
+            "udt_name": row[4],
+            "column_default": row[2],
         }
-        for r in rows
+        for row in rows
     ]
 
 
-def build_insert_rows(columns: list[dict], records: list[dict], ctx_base: dict) -> tuple[list[str], list[tuple]]:
-    insert_columns = []
-    for col in columns:
-        name = col["name"]
-        if name == "id":
-            continue
-        if name in RAW_ID_SPECS and (col["udt_name"] in INTEGER_TYPES or col["data_type"] in INTEGER_TYPES):
-            if col["has_default"]:
-                continue
-            raise ValueError(
-                f"Required raw ID column '{name}' is numeric and has no default; define it as identity/default in DDL"
-            )
-        insert_columns.append(col)
+def quote_identifier(identifier: str) -> str:
+    return '"' + identifier.replace('"', '""') + '"'
 
-    column_names = [c["name"] for c in insert_columns]
+
+def metadata_value(column_name: str, ctx: dict):
+    record = ctx["record"]
+    now_utc = ctx["now_utc"]
+    source_file_path = ctx["source_file_path"]
+
+    values = {
+        "batch_id": ctx["batch_id"],
+        "dt": ctx["dt"],
+        "source_bucket": "local",
+        "source_object_key": source_file_path,
+        "source_file_path": source_file_path,
+        "raw_file_path": source_file_path,
+        "source_system": "local",
+        "payload": json.dumps(
+            record,
+            sort_keys=True,
+            default=str,
+            separators=(",", ":"),
+        ),
+        "raw_record_hash": calculate_raw_record_hash(record),
+        "loaded_at": now_utc,
+        "ingested_at": now_utc,
+        "created_at": parse_timestamp(record.get("created_at"), now_utc),
+        "updated_at": parse_timestamp(record.get("updated_at"), now_utc),
+    }
+
+    return values.get(column_name)
+
+
+def should_skip_column(col: dict) -> bool:
+    name = col["name"]
+
+    if name == "id":
+        return True
+
+    if name in RAW_ID_SPECS:
+        is_integer_type = (
+            col["udt_name"] in INTEGER_TYPES
+            or col["data_type"] in INTEGER_TYPES
+        )
+
+        if is_integer_type and col["has_default"]:
+            return True
+
+        if is_integer_type and not col["has_default"]:
+            raise ValueError(
+                f"Required raw ID column '{name}' is numeric and has no default. "
+                "Change the DDL so it is generated by default, or make it text."
+            )
+
+    return False
+
+
+def build_insert_rows(
+    columns: list[dict],
+    records: list[dict],
+    ctx_base: dict,
+) -> tuple[list[str], list[tuple]]:
+    insert_columns = [
+        col for col in columns
+        if not should_skip_column(col)
+    ]
+
+    column_names = [col["name"] for col in insert_columns]
     rows = []
-    for idx, record in enumerate(records, start=1):
-        ctx = {**ctx_base, "record": record}
-        row_vals = []
+
+    for row_number, record in enumerate(records, start=1):
+        ctx = {
+            **ctx_base,
+            "record": record,
+        }
+
+        row_values = []
+
         for col in insert_columns:
             name = col["name"]
-            if name in record:
-                value = record[name]
-            elif name in RAW_ID_SPECS:
+            value = None
+
+            # Generate raw technical IDs first.
+            # This must happen before checking `name in record`, because older
+            # JSON rows may contain raw_customer_id/raw_account_id/raw_transaction_id as null.
+            if name in RAW_ID_SPECS:
                 entity, business_id_field, prefix = RAW_ID_SPECS[name]
-                col_type = col["udt_name"] or col["data_type"]
-                if col_type in TEXT_TYPES or col["data_type"] in TEXT_TYPES:
-                    value = build_raw_ingestion_id(entity, ctx["batch_id"], str(record[business_id_field]), prefix)
+
+                business_id = record.get(business_id_field)
+
+                if business_id is None:
+                    raise ValueError(
+                        f"Cannot load row {row_number}: missing business ID field "
+                        f"'{business_id_field}' needed to build '{name}'"
+                    )
+
+                column_type = col["udt_name"] or col["data_type"]
+
+                if column_type in TEXT_TYPES or col["data_type"] in TEXT_TYPES:
+                    value = build_raw_ingestion_id(
+                        entity=entity,
+                        batch_id=ctx["batch_id"],
+                        business_id=str(business_id),
+                        prefix=prefix,
+                    )
                 else:
                     value = None
-            elif name in META_FILLERS:
-                value = META_FILLERS[name](ctx)
+
+            elif name in record and record.get(name) is not None:
+                value = record[name]
+
             else:
-                value = None
+                value = metadata_value(name, ctx)
+
             if value is None and (not col["is_nullable"]) and (not col["has_default"]):
                 raise ValueError(
-                    f"Cannot load row {idx}: required column '{name}' has no value and no database default"
+                    f"Cannot load row {row_number}: required column '{name}' "
+                    "has no value and no database default"
                 )
-            row_vals.append(value)
-        rows.append(tuple(row_vals))
+
+            row_values.append(value)
+
+        rows.append(tuple(row_values))
+
     return column_names, rows
 
 
 def delete_existing_batch(conn, batch_id: str) -> None:
     cur = conn.cursor()
+
     try:
         for schema, table in DELETE_ORDER:
-            cur.execute(f"delete from {schema}.{table} where batch_id = %s", (batch_id,))
+            cur.execute(
+                f"""
+                delete from {quote_identifier(schema)}.{quote_identifier(table)}
+                where batch_id = %s;
+                """,
+                (batch_id,),
+            )
     finally:
         cur.close()
 
 
-def insert_rows(conn, schema: str, table: str, column_names: list[str], rows: list[tuple]) -> int:
-    placeholders = ", ".join(["%s"] * len(column_names))
-    sql = f"insert into {schema}.{table} ({', '.join(column_names)}) values ({placeholders})"
+def insert_rows(
+    conn,
+    schema: str,
+    table: str,
+    column_names: list[str],
+    rows: list[tuple],
+    chunk_size: int = 500,
+) -> int:
+    if not rows:
+        return 0
+
+    quoted_columns = ", ".join(
+        quote_identifier(column_name)
+        for column_name in column_names
+    )
+
+    row_placeholders = []
+    for column_name in column_names:
+        if column_name == "payload":
+            row_placeholders.append("%s::jsonb")
+        else:
+            row_placeholders.append("%s")
+
+    single_row_placeholder = "(" + ", ".join(row_placeholders) + ")"
+
     cur = conn.cursor()
+    inserted = 0
+
+    try:
+        for start_index in range(0, len(rows), chunk_size):
+            chunk = rows[start_index:start_index + chunk_size]
+
+            values_sql = ", ".join(
+                [single_row_placeholder] * len(chunk)
+            )
+
+            flat_params = []
+            for row in chunk:
+                flat_params.extend(row)
+
+            sql = (
+                f"insert into {quote_identifier(schema)}.{quote_identifier(table)} "
+                f"({quoted_columns}) values {values_sql};"
+            )
+
+            cur.execute(sql, tuple(flat_params))
+
+            inserted += len(chunk)
+            print(f"{schema}.{table}: inserted {inserted} of {len(rows)} rows")
+
+    finally:
+        cur.close()
+
+    return len(rows)
+    if not rows:
+        return 0
+
+    quoted_columns = ", ".join(
+        quote_identifier(column_name)
+        for column_name in column_names
+    )
+
+    placeholders = ", ".join(
+        "%s::jsonb" if column_name == "payload" else "%s"
+        for column_name in column_names
+    )
+
+    sql = (
+        f"insert into {quote_identifier(schema)}.{quote_identifier(table)} "
+        f"({quoted_columns}) values ({placeholders});"
+    )
+
+    cur = conn.cursor()
+
     try:
         cur.executemany(sql, rows)
     finally:
         cur.close()
-    return len(rows)
 
+    return len(rows)
 
 def run_batch_validations(conn, batch_id: str) -> dict:
     checks = {
-        "raw.raw_customers": "select count(*) from raw.raw_customers where batch_id = %s",
-        "raw.raw_accounts": "select count(*) from raw.raw_accounts where batch_id = %s",
-        "raw.raw_transactions": "select count(*) from raw.raw_transactions where batch_id = %s",
+        "raw.raw_customers": """
+            select count(*)
+            from raw.raw_customers
+            where batch_id = %s;
+        """,
+        "raw.raw_accounts": """
+            select count(*)
+            from raw.raw_accounts
+            where batch_id = %s;
+        """,
+        "raw.raw_transactions": """
+            select count(*)
+            from raw.raw_transactions
+            where batch_id = %s;
+        """,
         "accounts_without_customer": """
             select count(*)
             from raw.raw_accounts a
@@ -244,7 +488,7 @@ def run_batch_validations(conn, batch_id: str) -> dict:
                 on c.batch_id = a.batch_id
                and c.payload->>'customer_id' = a.payload->>'customer_id'
             where a.batch_id = %s
-              and c.id is null
+              and c.payload is null;
         """,
         "transactions_without_account": """
             select count(*)
@@ -253,67 +497,117 @@ def run_batch_validations(conn, batch_id: str) -> dict:
                 on a.batch_id = t.batch_id
                and a.payload->>'account_id' = t.payload->>'account_id'
             where t.batch_id = %s
-              and a.id is null
+              and a.payload is null;
         """,
         "transaction_customer_mismatch": """
             select count(*)
             from raw.raw_transactions t
             join raw.raw_accounts a
-              on a.batch_id = t.batch_id
-             and a.payload->>'account_id' = t.payload->>'account_id'
+                on a.batch_id = t.batch_id
+               and a.payload->>'account_id' = t.payload->>'account_id'
             where t.batch_id = %s
-              and a.payload->>'customer_id' <> t.payload->>'customer_id'
+              and t.payload->>'customer_id' <> a.payload->>'customer_id';
         """,
     }
+
     cur = conn.cursor()
+
     try:
-        out = {}
+        output = {}
+
         for label, sql in checks.items():
             cur.execute(sql, (batch_id,))
-            out[label] = cur.fetchone()[0]
-        return out
+            output[label] = cur.fetchone()[0]
+
+        return output
+
     finally:
         cur.close()
+
+def read_all_local_records(base_dir: Path, dt: str, batch_id: str) -> tuple[dict, dict]:
+    records_by_table = {}
+    file_paths = {}
+
+    for entity, schema, table, file_name, id_field in TABLE_CONFIG:
+        file_path = resolve_file_path(
+            base_dir=base_dir,
+            entity=entity,
+            dt=dt,
+            batch_id=batch_id,
+            file_name=file_name,
+        )
+
+        table_name = f"{schema}.{table}"
+
+        file_paths[table_name] = file_path
+        records_by_table[table_name] = read_jsonl_records(
+            file_path=file_path,
+            id_field=id_field,
+        )
+
+    return records_by_table, file_paths
 
 
 def main() -> None:
     args = parse_args()
     load_project_env()
+
     base_dir = Path(args.base_dir)
     now_utc = datetime.now(timezone.utc)
 
-    records_by_table = {}
-    file_paths = {}
-    for entity, schema, table, file_name, id_field in TABLE_CONFIG:
-        path = resolve_file_path(base_dir, entity, args.dt, args.batch_id, file_name)
-        file_paths[f"{schema}.{table}"] = path
-        records_by_table[f"{schema}.{table}"] = read_jsonl_records(path, id_field)
+    records_by_table, file_paths = read_all_local_records(
+        base_dir=base_dir,
+        dt=args.dt,
+        batch_id=args.batch_id,
+    )
 
     conn = get_neon_connection()
+
     try:
         delete_existing_batch(conn, args.batch_id)
 
         loaded_counts = {}
-        for entity, schema, table, _, _ in TABLE_CONFIG:
-            fqtn = f"{schema}.{table}"
+
+        for entity, schema, table, file_name, id_field in LOAD_ORDER:
+            full_table_name = f"{schema}.{table}"
             columns = get_table_columns(conn, schema, table)
+
             ctx_base = {
                 "batch_id": args.batch_id,
                 "dt": args.dt,
-                "source_file_path": str(file_paths[fqtn]).replace("\\", "/"),
+                "source_file_path": normalize_path(file_paths[full_table_name]),
                 "now_utc": now_utc,
             }
-            col_names, rows = build_insert_rows(columns, records_by_table[fqtn], ctx_base)
-            loaded_counts[fqtn] = insert_rows(conn, schema, table, col_names, rows)
+
+            column_names, rows = build_insert_rows(
+                columns=columns,
+                records=records_by_table[full_table_name],
+                ctx_base=ctx_base,
+            )
+
+            loaded_counts[full_table_name] = insert_rows(
+                conn=conn,
+                schema=schema,
+                table=table,
+                column_names=column_names,
+                rows=rows,
+            )
 
         validations = run_batch_validations(conn, args.batch_id)
+
         conn.commit()
 
-        print("Rows loaded:")
-        for table in ["raw.raw_customers", "raw.raw_accounts", "raw.raw_transactions"]:
-            print(f"  {table}: {loaded_counts[table]}")
+        print("\nRows loaded")
+        print("-----------")
+        for table_name in [
+            "raw.raw_customers",
+            "raw.raw_accounts",
+            "raw.raw_transactions",
+        ]:
+            print(f"{table_name}: {loaded_counts[table_name]}")
 
-        print("Validation checks:")
+        print("\nValidation checks")
+        print("-----------------")
         for key in [
             "raw.raw_customers",
             "raw.raw_accounts",
@@ -322,7 +616,12 @@ def main() -> None:
             "transactions_without_account",
             "transaction_customer_mismatch",
         ]:
-            print(f"  {key}: {validations[key]}")
+            print(f"{key}: {validations[key]}")
+
+    except Exception:
+        conn.rollback()
+        raise
+
     finally:
         conn.close()
 
