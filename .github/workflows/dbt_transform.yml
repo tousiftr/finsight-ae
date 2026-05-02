@@ -3,9 +3,12 @@ name: FinSight dbt Transform
 on:
   workflow_dispatch:
 
+  schedule:
+    - cron: "0 8,20 * * *"
+
 jobs:
   dbt-transform:
-    name: Check and build dbt staging
+    name: Run full dbt transformation
     runs-on: ubuntu-latest
 
     env:
@@ -67,14 +70,36 @@ jobs:
         working-directory: dbt_fintech
         run: dbt debug --target dev
 
+      - name: Install dbt packages
+        working-directory: dbt_fintech
+        run: dbt deps --target dev
+
       - name: Parse dbt project
         working-directory: dbt_fintech
         run: dbt parse --target dev
 
-      - name: List staging models
+      - name: Check source freshness
         working-directory: dbt_fintech
-        run: dbt ls --target dev --select path:models/staging
+        run: dbt source freshness --target dev
 
-      - name: Build staging models only
+      - name: List all dbt models
         working-directory: dbt_fintech
-        run: dbt build --target dev --select path:models/staging
+        run: dbt ls --target dev --resource-type model
+
+      - name: Build all dbt models
+        working-directory: dbt_fintech
+        run: dbt build --target dev
+
+      - name: Generate dbt docs
+        working-directory: dbt_fintech
+        run: dbt docs generate --target dev
+
+      - name: Upload dbt artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-artifacts
+          path: |
+            dbt_fintech/target/manifest.json
+            dbt_fintech/target/run_results.json
+            dbt_fintech/target/catalog.json
+            dbt_fintech/target/sources.json
