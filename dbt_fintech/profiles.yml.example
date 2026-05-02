@@ -1,0 +1,13 @@
+finsight_fintech:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DBT_PG_HOST') }}"
+      user: "{{ env_var('DBT_PG_USER') }}"
+      password: "{{ env_var('DBT_PG_PASSWORD') }}"
+      port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
+      dbname: "{{ env_var('DBT_PG_DATABASE') }}"
+      schema: dbt_rad
+      sslmode: require
+      threads: 4

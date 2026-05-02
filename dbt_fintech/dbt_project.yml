@@ -1,0 +1,21 @@
+name: finsight_fintech
+version: "1.0.0"
+config-version: 2
+
+profile: finsight_fintech
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  finsight_fintech:
+    staging:
+      +materialized: view
+      +schema: staging

@@ -1,0 +1,31 @@
+
+.env.dbt
+
+# Secrets
+.env
+.env.*
+!.env.example
+.env.dbt
+
+# Python environments
+.venv/
+.venv_dbt/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Generated/local data
+data/
+
+# dbt artifacts
+dbt_fintech/target/
+dbt_fintech/logs/
+
+
+# dbt local/user config
+dbt_fintech/.user.yml
+dbt_fintech/profiles.yml
+
+# temporary backups
+*_backup.py

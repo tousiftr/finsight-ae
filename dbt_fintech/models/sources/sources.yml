@@ -1,0 +1,32 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw data loaded from Cloudflare R2 into Neon Postgres.
+    schema: raw
+
+    tables:
+      - name: raw_customers
+        description: Raw customer records loaded from R2 JSONL files.
+
+        columns:
+          - name: dt
+            tests:
+              - not_null
+
+          - name: batch_id
+            tests:
+              - not_null
+
+          - name: payload
+            tests:
+              - not_null
+
+          - name: source_object_key
+            tests:
+              - not_null
+
+          - name: raw_record_hash
+            tests:
+              - not_null
+              - unique
