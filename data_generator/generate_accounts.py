@@ -40,3 +40,5 @@ def generate_accounts(customers: list[dict]) -> list[dict]:
                 }
             )
             account_seq += 1
+
+    return accounts
