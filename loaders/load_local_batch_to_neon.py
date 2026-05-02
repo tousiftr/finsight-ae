@@ -26,6 +26,8 @@ DELETE_ORDER = [
 META_FILLERS = {
     "batch_id": lambda ctx: ctx["batch_id"],
     "dt": lambda ctx: ctx["dt"],
+    "source_bucket": lambda _ctx: "local",
+    "source_object_key": lambda ctx: ctx["source_file_path"],
     "source_file_path": lambda ctx: ctx["source_file_path"],
     "raw_file_path": lambda ctx: ctx["source_file_path"],
     "source_system": lambda _ctx: "local",
