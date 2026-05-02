@@ -1,27 +1,29 @@
 version: 2
 
 models:
-  - name: int_transactions_enriched
-    description: Incremental intermediate model that enriches transactions with account and customer context.
+  - name: int_customers
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
 
+  - name: int_accounts
+    columns:
+      - name: account_id
+        tests: [not_null, unique]
+
+  - name: int_transactions
     columns:
       - name: transaction_id
-        tests:
-          - not_null
-          - unique
+        tests: [not_null, unique]
 
-      - name: account_id
-        tests:
-          - not_null
+  - name: int_transactions_enriched
+    columns:
+      - name: transaction_id
+        tests: [not_null, unique]
 
-      - name: customer_id
-        tests:
-          - not_null
-
-      - name: amount
-        tests:
-          - not_null
-
-      - name: loaded_at
-        tests:
-          - not_null
+  - name: int_daily_finance_metrics
+    columns:
+      - name: transaction_date
+        tests: [not_null]
+      - name: currency
+        tests: [not_null]

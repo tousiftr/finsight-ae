@@ -4,17 +4,12 @@ models:
   - name: stg_customers
     columns:
       - name: customer_id
-        tests:
-          - not_null
-          - unique
+        tests: [not_null, unique]
 
   - name: stg_accounts
     columns:
       - name: account_id
-        tests:
-          - not_null
-          - unique
-
+        tests: [not_null, unique]
       - name: customer_id
         tests:
           - not_null
@@ -25,20 +20,23 @@ models:
   - name: stg_transactions
     columns:
       - name: transaction_id
-        tests:
-          - not_null
-          - unique
-
+        tests: [not_null, unique]
       - name: account_id
         tests:
           - not_null
           - relationships:
               to: ref('stg_accounts')
               field: account_id
-
       - name: customer_id
         tests:
           - not_null
           - relationships:
               to: ref('stg_customers')
               field: customer_id
+      - name: amount
+        tests: [not_null]
+      - name: transaction_status
+        tests:
+          - accepted_values:
+              values: ['approved', 'completed', 'success', 'succeeded', 'declined', 'failed', 'error', 'pending']
+              quote: true

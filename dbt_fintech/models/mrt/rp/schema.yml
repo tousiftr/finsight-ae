@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: mrt_rp__finance_daily_transactions
+    columns:
+      - name: transaction_id
+        tests: [not_null]
+
+  - name: mrt_rp__daily_kpis
+    columns:
+      - name: transaction_date
+        tests: [not_null]
+      - name: currency
+        tests: [not_null]
