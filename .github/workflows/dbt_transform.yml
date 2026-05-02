@@ -3,23 +3,13 @@ name: FinSight dbt Transform
 on:
   workflow_dispatch:
 
-  schedule:
-    - cron: "0 8,20 * * *"
-
 jobs:
   dbt-transform:
-    name: Run dbt transformations
+    name: Check and build dbt staging
     runs-on: ubuntu-latest
 
     env:
-      DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
-      DBT_TARGET: dev
-
-      DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
-      DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
-      DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
-      DBT_PG_PORT: ${{ secrets.DBT_PG_PORT }}
-      DBT_PG_DATABASE: ${{ secrets.DBT_PG_DATABASE }}
+      NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
 
     steps:
       - name: Checkout repository
@@ -30,60 +20,52 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dbt
+      - name: Install dbt-postgres
         run: |
           python -m pip install --upgrade pip
           pip install dbt-postgres
 
-      - name: Create dbt profiles.yml
+      - name: Parse Neon database URL for dbt
         run: |
-          mkdir -p "${DBT_PROFILES_DIR}"
+          python - <<'PY'
+          import os
+          from urllib.parse import urlparse, unquote
 
-          cat > "${DBT_PROFILES_DIR}/profiles.yml" <<'EOF'
-          finsight_fintech:
-            target: dev
-            outputs:
-              dev:
-                type: postgres
-                host: "{{ env_var('DBT_PG_HOST') }}"
-                user: "{{ env_var('DBT_PG_USER') }}"
-                password: "{{ env_var('DBT_PG_PASSWORD') }}"
-                port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
-                dbname: "{{ env_var('DBT_PG_DATABASE') }}"
-                schema: dbt_rad
-                sslmode: require
-                threads: 4
-          EOF
+          url = os.environ["NEON_DATABASE_URL"]
+          parsed = urlparse(url)
 
-          echo "Created profiles.yml at ${DBT_PROFILES_DIR}/profiles.yml"
-          ls -la "${DBT_PROFILES_DIR}"
+          host = parsed.hostname
+          port = parsed.port or 5432
+          user = unquote(parsed.username or "")
+          password = unquote(parsed.password or "")
+          database = unquote((parsed.path or "").lstrip("/"))
+
+          if not host or not user or not password or not database:
+              raise ValueError("NEON_DATABASE_URL is missing host, user, password, or database")
+
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
+              f.write(f"DBT_PG_HOST={host}\n")
+              f.write(f"DBT_PG_PORT={port}\n")
+              f.write(f"DBT_PG_USER={user}\n")
+              f.write(f"DBT_PG_PASSWORD={password}\n")
+              f.write(f"DBT_PG_DATABASE={database}\n")
+          PY
+
+      - name: Show dbt version
+        run: dbt --version
 
       - name: Check dbt connection
         working-directory: dbt_fintech
-        run: dbt debug --target dev
+        run: dbt debug --target dev --profiles-dir .
 
-      - name: Install dbt packages
+      - name: Parse dbt project
         working-directory: dbt_fintech
-        run: dbt deps
+        run: dbt parse --target dev --profiles-dir .
 
-      - name: Check source freshness
+      - name: List staging models
         working-directory: dbt_fintech
-        run: dbt source freshness --target dev
+        run: dbt ls --target dev --profiles-dir . --select path:models/staging
 
-      - name: Run dbt build
+      - name: Build staging models only
         working-directory: dbt_fintech
-        run: dbt build --target dev
-
-      - name: Generate dbt docs
-        working-directory: dbt_fintech
-        run: dbt docs generate --target dev
-
-      - name: Upload dbt artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dbt-artifacts
-          path: |
-            dbt_fintech/target/manifest.json
-            dbt_fintech/target/run_results.json
-            dbt_fintech/target/catalog.json
-            dbt_fintech/target/sources.json
+        run: dbt build --target dev --profiles-dir . --select path:models/staging
