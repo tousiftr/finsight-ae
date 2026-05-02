@@ -12,8 +12,14 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DBT_PROFILES_DIR: ~/.dbt
-      DBT_TARGET: prod
+      DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
+      DBT_TARGET: dev
+
+      DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
+      DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
+      DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
+      DBT_PG_PORT: ${{ secrets.DBT_PG_PORT }}
+      DBT_PG_DATABASE: ${{ secrets.DBT_PG_DATABASE }}
 
     steps:
       - name: Checkout repository
@@ -24,34 +30,37 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Python dependencies
+      - name: Install dbt
         run: |
           python -m pip install --upgrade pip
           pip install dbt-postgres
 
       - name: Create dbt profiles.yml
         run: |
-          mkdir -p ~/.dbt
+          mkdir -p "${DBT_PROFILES_DIR}"
 
-          cat > ~/.dbt/profiles.yml <<EOF
-          dbt_fintech:
-            target: prod
+          cat > "${DBT_PROFILES_DIR}/profiles.yml" <<'EOF'
+          finsight_fintech:
+            target: dev
             outputs:
-              prod:
+              dev:
                 type: postgres
-                host: ${{ secrets.DBT_NEON_HOST }}
-                port: 5432
-                user: ${{ secrets.DBT_NEON_USER }}
-                password: ${{ secrets.DBT_NEON_PASSWORD }}
-                dbname: ${{ secrets.DBT_NEON_DATABASE }}
-                schema: staging
-                threads: 4
+                host: "{{ env_var('DBT_PG_HOST') }}"
+                user: "{{ env_var('DBT_PG_USER') }}"
+                password: "{{ env_var('DBT_PG_PASSWORD') }}"
+                port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
+                dbname: "{{ env_var('DBT_PG_DATABASE') }}"
+                schema: dbt_rad
                 sslmode: require
+                threads: 4
           EOF
+
+          echo "Created profiles.yml at ${DBT_PROFILES_DIR}/profiles.yml"
+          ls -la "${DBT_PROFILES_DIR}"
 
       - name: Check dbt connection
         working-directory: dbt_fintech
-        run: dbt debug --target prod
+        run: dbt debug --target dev
 
       - name: Install dbt packages
         working-directory: dbt_fintech
@@ -59,15 +68,15 @@ jobs:
 
       - name: Check source freshness
         working-directory: dbt_fintech
-        run: dbt source freshness --target prod
+        run: dbt source freshness --target dev
 
       - name: Run dbt build
         working-directory: dbt_fintech
-        run: dbt build --target prod
+        run: dbt build --target dev
 
       - name: Generate dbt docs
         working-directory: dbt_fintech
-        run: dbt docs generate --target prod
+        run: dbt docs generate --target dev
 
       - name: Upload dbt artifacts
         uses: actions/upload-artifact@v4
