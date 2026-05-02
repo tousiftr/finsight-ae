@@ -1,0 +1,19 @@
+select
+    transaction_id,
+    account_id,
+    customer_id,
+    transaction_ts,
+    transaction_date,
+    amount,
+    currency,
+    transaction_type,
+    transaction_status,
+    merchant_category,
+    account_type,
+    account_status,
+    customer_status,
+    country,
+    batch_id,
+    source_file_path,
+    ingested_at
+from {{ ref('int_transactions_enriched') }}
