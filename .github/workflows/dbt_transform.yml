@@ -29,25 +29,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install dbt-postgres
 
-      - name: Create dbt profiles.yml
+            - name: Create dbt profiles.yml
         run: |
           mkdir -p "$DBT_PROFILES_DIR"
 
-          cat > "$DBT_PROFILES_DIR/profiles.yml" <<EOF
-          dbt_fintech:
-            target: prod
+          cat > "$DBT_PROFILES_DIR/profiles.yml" <<'EOF'
+          finsight_fintech:
+            target: dev
             outputs:
-              prod:
+              dev:
                 type: postgres
-                host: ${{ secrets.DBT_NEON_HOST }}
-                port: 5432
-                user: ${{ secrets.DBT_NEON_USER }}
-                password: ${{ secrets.DBT_NEON_PASSWORD }}
-                dbname: ${{ secrets.DBT_NEON_DATABASE }}
-                schema: staging
-                threads: 4
+                host: "{{ env_var('DBT_PG_HOST') }}"
+                user: "{{ env_var('DBT_PG_USER') }}"
+                password: "{{ env_var('DBT_PG_PASSWORD') }}"
+                port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
+                dbname: "{{ env_var('DBT_PG_DATABASE') }}"
+                schema: dbt_rad
                 sslmode: require
+                threads: 4
           EOF
+
+          echo "Created profiles.yml"
+          grep -E "^[a-zA-Z_]+:" "$DBT_PROFILES_DIR/profiles.yml"
 
       - name: Verify dbt profile exists
         run: |
