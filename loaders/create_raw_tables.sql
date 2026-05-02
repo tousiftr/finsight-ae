@@ -2,6 +2,7 @@ create schema if not exists raw;
 
 create table if not exists raw.raw_customers (
     id bigserial primary key,
+    raw_customer_id text not null,
     customer_id text,
     payload jsonb not null,
     source_system text not null default 'cloudflare_r2',
@@ -18,6 +19,7 @@ create table if not exists raw.raw_customers (
 
 create table if not exists raw.raw_accounts (
     id bigserial primary key,
+    raw_account_id text not null,
     payload jsonb not null,
     source_system text not null default 'cloudflare_r2',
     source_bucket text not null,
@@ -48,6 +50,7 @@ create table if not exists raw.raw_accounts (
 
 create table if not exists raw.raw_transactions (
     id bigserial primary key,
+    raw_transaction_id text not null,
     payload jsonb not null,
     source_system text not null default 'cloudflare_r2',
     source_bucket text not null,

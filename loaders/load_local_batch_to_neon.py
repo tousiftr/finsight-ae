@@ -39,6 +39,15 @@ META_FILLERS = {
     "updated_at": lambda ctx: parse_timestamp(ctx["record"].get("updated_at"), ctx["now_utc"]),
 }
 
+RAW_ID_SPECS = {
+    "raw_customer_id": ("customers", "customer_id", "raw_cust_"),
+    "raw_account_id": ("accounts", "account_id", "raw_acct_"),
+    "raw_transaction_id": ("transactions", "transaction_id", "raw_txn_"),
+}
+
+TEXT_TYPES = {"text", "character varying", "character", "varchar", "bpchar"}
+INTEGER_TYPES = {"integer", "bigint", "int4", "int8"}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Load one local partitioned FinSight raw batch into Neon Postgres.")
@@ -105,6 +114,12 @@ def calculate_raw_record_hash(record: dict) -> str:
     return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 
+def build_raw_ingestion_id(entity: str, batch_id: str, business_id: str, prefix: str) -> str:
+    seed = f"{entity}|{batch_id}|{business_id}"
+    digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:32]
+    return f"{prefix}{digest}"
+
+
 def parse_timestamp(value, fallback: datetime):
     if not value:
         return fallback
@@ -155,17 +170,35 @@ def get_table_columns(conn, schema: str, table: str) -> list[dict]:
 
 
 def build_insert_rows(columns: list[dict], records: list[dict], ctx_base: dict) -> tuple[list[str], list[tuple]]:
-    column_names = [c["name"] for c in columns if c["name"] != "id"]
+    insert_columns = []
+    for col in columns:
+        name = col["name"]
+        if name == "id":
+            continue
+        if name in RAW_ID_SPECS and (col["udt_name"] in INTEGER_TYPES or col["data_type"] in INTEGER_TYPES):
+            if col["has_default"]:
+                continue
+            raise ValueError(
+                f"Required raw ID column '{name}' is numeric and has no default; define it as identity/default in DDL"
+            )
+        insert_columns.append(col)
+
+    column_names = [c["name"] for c in insert_columns]
     rows = []
     for idx, record in enumerate(records, start=1):
         ctx = {**ctx_base, "record": record}
         row_vals = []
-        for col in columns:
+        for col in insert_columns:
             name = col["name"]
-            if name == "id":
-                continue
             if name in record:
                 value = record[name]
+            elif name in RAW_ID_SPECS:
+                entity, business_id_field, prefix = RAW_ID_SPECS[name]
+                col_type = col["udt_name"] or col["data_type"]
+                if col_type in TEXT_TYPES or col["data_type"] in TEXT_TYPES:
+                    value = build_raw_ingestion_id(entity, ctx["batch_id"], str(record[business_id_field]), prefix)
+                else:
+                    value = None
             elif name in META_FILLERS:
                 value = META_FILLERS[name](ctx)
             else:
