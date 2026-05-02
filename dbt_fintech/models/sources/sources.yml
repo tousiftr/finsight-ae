@@ -30,3 +30,53 @@ sources:
             tests:
               - not_null
               - unique
+
+      - name: raw_accounts
+        description: Raw account records loaded from R2 JSONL files.
+
+        columns:
+          - name: dt
+            tests:
+              - not_null
+
+          - name: batch_id
+            tests:
+              - not_null
+
+          - name: payload
+            tests:
+              - not_null
+
+          - name: source_object_key
+            tests:
+              - not_null
+
+          - name: raw_record_hash
+            tests:
+              - not_null
+              - unique
+
+      - name: raw_transactions
+        description: Raw transaction records loaded from R2 JSONL files.
+
+        columns:
+          - name: dt
+            tests:
+              - not_null
+
+          - name: batch_id
+            tests:
+              - not_null
+
+          - name: payload
+            tests:
+              - not_null
+
+          - name: source_object_key
+            tests:
+              - not_null
+
+          - name: raw_record_hash
+            tests:
+              - not_null
+              - unique
