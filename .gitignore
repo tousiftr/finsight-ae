@@ -29,3 +29,5 @@ dbt_fintech/profiles.yml
 
 # temporary backups
 *_backup.py
+
+/.env.example
