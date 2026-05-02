@@ -19,6 +19,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Show repo files
+        run: |
+          pwd
+          ls -la
+          echo "dbt_fintech folder:"
+          ls -la dbt_fintech
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -31,6 +38,18 @@ jobs:
 
       - name: Show dbt version
         run: dbt --version
+
+      - name: Verify dbt profile file exists
+        working-directory: dbt_fintech
+        run: |
+          echo "Current folder:"
+          pwd
+          echo "Files:"
+          ls -la
+          echo "Profile name in dbt_project.yml:"
+          grep "^profile:" dbt_project.yml
+          echo "profiles.yml exists:"
+          test -f profiles.yml && echo "profiles.yml found" || exit 1
 
       - name: Check dbt connection
         working-directory: dbt_fintech
