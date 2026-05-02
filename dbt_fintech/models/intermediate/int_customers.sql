@@ -1,6 +1,6 @@
 select
     customer_id,
-    customer_status,
+    kyc_status as customer_status,
     country,
     created_at,
     batch_id,
