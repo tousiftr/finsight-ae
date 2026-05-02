@@ -1,0 +1,80 @@
+name: FinSight dbt Transform
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 8,20 * * *"
+
+jobs:
+  dbt-transform:
+    name: Run dbt transformations
+    runs-on: ubuntu-latest
+
+    env:
+      DBT_PROFILES_DIR: ~/.dbt
+      DBT_TARGET: prod
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-postgres
+
+      - name: Create dbt profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+
+          cat > ~/.dbt/profiles.yml <<EOF
+          dbt_fintech:
+            target: prod
+            outputs:
+              prod:
+                type: postgres
+                host: ${{ secrets.DBT_NEON_HOST }}
+                port: 5432
+                user: ${{ secrets.DBT_NEON_USER }}
+                password: ${{ secrets.DBT_NEON_PASSWORD }}
+                dbname: ${{ secrets.DBT_NEON_DATABASE }}
+                schema: staging
+                threads: 4
+                sslmode: require
+          EOF
+
+      - name: Check dbt connection
+        working-directory: dbt_fintech
+        run: dbt debug --target prod
+
+      - name: Install dbt packages
+        working-directory: dbt_fintech
+        run: dbt deps
+
+      - name: Check source freshness
+        working-directory: dbt_fintech
+        run: dbt source freshness --target prod
+
+      - name: Run dbt build
+        working-directory: dbt_fintech
+        run: dbt build --target prod
+
+      - name: Generate dbt docs
+        working-directory: dbt_fintech
+        run: dbt docs generate --target prod
+
+      - name: Upload dbt artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-artifacts
+          path: |
+            dbt_fintech/target/manifest.json
+            dbt_fintech/target/run_results.json
+            dbt_fintech/target/catalog.json
+            dbt_fintech/target/sources.json
