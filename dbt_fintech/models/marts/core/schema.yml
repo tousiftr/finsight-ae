@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: mrt_customer_account_summary
+    description: Customer-level mart summarizing account ownership and transaction activity.
+
+    columns:
+      - name: customer_id
+        description: Unique customer identifier.
+        tests:
+          - not_null
+          - unique
+
+      - name: account_count
+        description: Number of account rows associated with the customer.
+        tests:
+          - not_null
+
+      - name: active_account_count
+        description: Number of active or open accounts associated with the customer.
+        tests:
+          - not_null
+
+      - name: transaction_count
+        description: Number of transactions associated with the customer.
+        tests:
+          - not_null
+
+      - name: gross_transaction_volume
+        description: Sum of transaction amounts associated with the customer.
+        tests:
+          - not_null
+
+      - name: has_accounts
+        description: Boolean flag indicating whether the customer has at least one account.
+        tests:
+          - not_null
+
+      - name: has_transactions
+        description: Boolean flag indicating whether the customer has at least one transaction.
+        tests:
+          - not_null

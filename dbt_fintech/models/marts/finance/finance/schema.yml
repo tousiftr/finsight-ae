@@ -69,3 +69,24 @@ models:
       - name: transaction_success_rate
         tests:
           - not_null
+
+  - name: mrt_finance_daily_kpis
+    description: Daily finance KPI mart aggregated from daily transaction metrics.
+
+    columns:
+      - name: transaction_date
+        tests:
+          - not_null
+          - unique
+
+      - name: total_transactions
+        tests:
+          - not_null
+
+      - name: gross_transaction_volume
+        tests:
+          - not_null
+
+      - name: transaction_success_rate
+        tests:
+          - not_null
