@@ -23,7 +23,7 @@ jobs:
         run: |
           pwd
           ls -la
-          echo "dbt_fintech folder:"
+          echo "dbt_fintech:"
           ls -la dbt_fintech
 
       - name: Set up Python 3.11
@@ -42,13 +42,9 @@ jobs:
       - name: Verify dbt profile file exists
         working-directory: dbt_fintech
         run: |
-          echo "Current folder:"
           pwd
-          echo "Files:"
           ls -la
-          echo "Profile name in dbt_project.yml:"
           grep "^profile:" dbt_project.yml
-          echo "profiles.yml exists:"
           test -f profiles.yml && echo "profiles.yml found" || exit 1
 
       - name: Check dbt connection
