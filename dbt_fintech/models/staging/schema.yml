@@ -5,6 +5,14 @@ models:
     columns:
       - name: customer_id
         tests: [not_null, unique]
+      - name: kyc_status
+        tests:
+          - accepted_values:
+              values: ['pending', 'approved', 'rejected', 'manual_review']
+      - name: signup_channel
+        tests:
+          - accepted_values:
+              values: ['organic', 'paid_search', 'referral', 'partner', 'social']
 
   - name: stg_accounts
     columns:
@@ -16,27 +24,40 @@ models:
           - relationships:
               to: ref('stg_customers')
               field: customer_id
+      - name: account_type
+        tests:
+          - accepted_values:
+              values: ['savings', 'plus', 'investment', 'super', 'salary']
+      - name: investment_sub_type
+        tests:
+          - accepted_values:
+              values: ['crypto', 'etf', 'cfd', 'fx']
+              config:
+                where: "investment_sub_type is not null"
 
   - name: stg_transactions
     columns:
       - name: transaction_id
         tests: [not_null, unique]
-      - name: account_id
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_accounts')
-              field: account_id
       - name: customer_id
         tests:
           - not_null
           - relationships:
               to: ref('stg_customers')
               field: customer_id
+      - name: account_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: account_id
       - name: amount
         tests: [not_null]
-      - name: transaction_status
+      - name: status
         tests:
           - accepted_values:
-              values: ['approved', 'completed', 'success', 'succeeded', 'declined', 'failed', 'error', 'pending']
-              quote: true
+              values: ['completed', 'pending', 'failed', 'declined']
+      - name: transaction_type
+        tests:
+          - accepted_values:
+              values: ['card_payment', 'bank_transfer', 'withdrawal', 'deposit']
