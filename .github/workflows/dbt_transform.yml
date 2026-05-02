@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DBT_PROFILES_DIR: ~/.dbt
+      DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
       DBT_TARGET: prod
 
     steps:
@@ -31,9 +31,9 @@ jobs:
 
       - name: Create dbt profiles.yml
         run: |
-          mkdir -p ~/.dbt
+          mkdir -p "$DBT_PROFILES_DIR"
 
-          cat > ~/.dbt/profiles.yml <<EOF
+          cat > "$DBT_PROFILES_DIR/profiles.yml" <<EOF
           dbt_fintech:
             target: prod
             outputs:
@@ -48,6 +48,12 @@ jobs:
                 threads: 4
                 sslmode: require
           EOF
+
+      - name: Verify dbt profile exists
+        run: |
+          echo "DBT_PROFILES_DIR=$DBT_PROFILES_DIR"
+          ls -la "$DBT_PROFILES_DIR"
+          test -f "$DBT_PROFILES_DIR/profiles.yml"
 
       - name: Check dbt connection
         working-directory: dbt_fintech
