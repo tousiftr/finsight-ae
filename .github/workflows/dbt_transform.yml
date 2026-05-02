@@ -3,17 +3,18 @@ name: FinSight dbt Transform
 on:
   workflow_dispatch:
 
-  schedule:
-    - cron: "0 8,20 * * *"
-
 jobs:
   dbt-transform:
-    name: Run dbt transformations
+    name: Check and build dbt staging
     runs-on: ubuntu-latest
 
     env:
       DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
-      DBT_TARGET: prod
+      DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
+      DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
+      DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
+      DBT_PG_PORT: ${{ secrets.DBT_PG_PORT }}
+      DBT_PG_DATABASE: ${{ secrets.DBT_PG_DATABASE }}
 
     steps:
       - name: Checkout repository
@@ -24,12 +25,12 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Python dependencies
+      - name: Install dbt-postgres
         run: |
           python -m pip install --upgrade pip
           pip install dbt-postgres
 
-            - name: Create dbt profiles.yml
+      - name: Create dbt profiles.yml
         run: |
           mkdir -p "$DBT_PROFILES_DIR"
 
@@ -49,41 +50,31 @@ jobs:
                 threads: 4
           EOF
 
-          echo "Created profiles.yml"
-          grep -E "^[a-zA-Z_]+:" "$DBT_PROFILES_DIR/profiles.yml"
-
-      - name: Verify dbt profile exists
-        run: |
           echo "DBT_PROFILES_DIR=$DBT_PROFILES_DIR"
           ls -la "$DBT_PROFILES_DIR"
-          test -f "$DBT_PROFILES_DIR/profiles.yml"
+          echo "Profile names:"
+          grep -E "^[a-zA-Z_]+:" "$DBT_PROFILES_DIR/profiles.yml"
+
+      - name: Show dbt version
+        run: dbt --version
+
+      - name: Verify dbt project profile name
+        working-directory: dbt_fintech
+        run: |
+          grep "^profile:" dbt_project.yml
 
       - name: Check dbt connection
         working-directory: dbt_fintech
-        run: dbt debug --target prod
+        run: dbt debug --target dev
 
-      - name: Install dbt packages
+      - name: Parse dbt project
         working-directory: dbt_fintech
-        run: dbt deps
+        run: dbt parse --target dev
 
-      - name: Check source freshness
+      - name: List staging models
         working-directory: dbt_fintech
-        run: dbt source freshness --target prod
+        run: dbt ls --target dev --select path:models/staging
 
-      - name: Run dbt build
+      - name: Build staging models only
         working-directory: dbt_fintech
-        run: dbt build --target prod
-
-      - name: Generate dbt docs
-        working-directory: dbt_fintech
-        run: dbt docs generate --target prod
-
-      - name: Upload dbt artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dbt-artifacts
-          path: |
-            dbt_fintech/target/manifest.json
-            dbt_fintech/target/run_results.json
-            dbt_fintech/target/catalog.json
-            dbt_fintech/target/sources.json
+        run: dbt build --target dev --select path:models/staging
