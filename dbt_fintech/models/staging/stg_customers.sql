@@ -33,6 +33,22 @@ deduped as (
     from renamed
 )
 
-select * except(_rn)
+select
+    customer_id,
+    first_name,
+    last_name,
+    email,
+    phone_number,
+    country,
+    signup_channel,
+    kyc_status,
+    created_at,
+    updated_at,
+    dt,
+    batch_id,
+    source_object_key,
+    source_file_path,
+    raw_record_hash,
+    ingested_at
 from deduped
 where _rn = 1

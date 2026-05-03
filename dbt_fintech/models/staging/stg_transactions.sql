@@ -33,6 +33,22 @@ deduped as (
     from renamed
 )
 
-select * except(_rn)
+select
+    transaction_id,
+    account_id,
+    customer_id,
+    transaction_type,
+    amount,
+    currency,
+    status,
+    merchant_category,
+    transaction_timestamp,
+    payload_batch_id,
+    dt,
+    batch_id,
+    source_object_key,
+    source_file_path,
+    raw_record_hash,
+    ingested_at
 from deduped
 where _rn = 1
