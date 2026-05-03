@@ -106,9 +106,9 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--min-customers", type=int, default=2)
-    parser.add_argument("--max-customers", type=int, default=4)
-    parser.add_argument("--min-transactions", type=int, default=20)
-    parser.add_argument("--max-transactions", type=int, default=80)
+    parser.add_argument("--max-customers", type=int, default=25)
+    parser.add_argument("--min-transactions", type=int, default=200)
+    parser.add_argument("--max-transactions", type=int, default=350)
     parser.add_argument("--output-dir", default="data/raw")
 
     args = parser.parse_args()
