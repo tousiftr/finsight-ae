@@ -1,8 +1,8 @@
-﻿name: FinSight Raw Micro Ingestion
+name: FinSight Raw Micro Ingestion
 
 on:
   schedule:
-    - cron: "3,13,23,33,43,53 * * * *"
+    - cron: "3/10 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -37,30 +37,42 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Set batch variables
+        run: |
+          BATCH_DT=$(date -u +'%Y-%m-%d')
+          BATCH_ID=$(date -u +'%Y%m%d_%H%M')
+          RUN_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          echo "BATCH_DT=$BATCH_DT" >> "$GITHUB_ENV"
+          echo "BATCH_ID=$BATCH_ID" >> "$GITHUB_ENV"
+          echo "RUN_STARTED_AT=$RUN_STARTED_AT" >> "$GITHUB_ENV"
+          echo "BATCH_DT=$BATCH_DT"
+          echo "BATCH_ID=$BATCH_ID"
+          echo "RUN_STARTED_AT=$RUN_STARTED_AT"
+
       - name: Generate realistic fintech micro-batch
         run: |
-          python data_generator/generate_micro_batch.py
+          python data_generator/generate_micro_batch.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
 
       - name: Upload micro-batch to Cloudflare R2
         run: |
-          python scripts/upload_micro_batch_to_r2.py
+          python scripts/upload_micro_batch_to_r2.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
 
       - name: Load customers into Neon raw
         run: |
-          python loaders/load_customers_r2_to_neon.py --latest
+          python loaders/load_customers_r2_to_neon.py --key "customers/dt=$BATCH_DT/batch_id=$BATCH_ID/customers.jsonl"
 
       - name: Load accounts into Neon raw
         run: |
-          python loaders/load_accounts_r2_to_neon.py --latest
+          python loaders/load_accounts_r2_to_neon.py --key "accounts/dt=$BATCH_DT/batch_id=$BATCH_ID/accounts.jsonl"
 
       - name: Load transactions into Neon raw
         run: |
-          python loaders/load_transactions_r2_to_neon.py --latest
+          python loaders/load_transactions_r2_to_neon.py --key "transactions/dt=$BATCH_DT/batch_id=$BATCH_ID/transactions.jsonl"
 
       - name: Verify raw customers
         run: |
-          python loaders/verify_raw_customers_loaded.py
+          python loaders/verify_raw_customers_loaded.py --batch-id "$BATCH_ID"
 
       - name: Verify raw accounts and transactions
         run: |
-          python loaders/verify_raw_accounts_transactions_loaded.py
+          python loaders/verify_raw_accounts_transactions_loaded.py --batch-id "$BATCH_ID"

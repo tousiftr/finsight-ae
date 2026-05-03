@@ -1,4 +1,4 @@
-import json
+import argparse
 import os
 from pathlib import Path
 
@@ -17,10 +17,7 @@ def get_env_value(*names: str) -> str:
         value = os.getenv(name)
         if value:
             return value
-
-    raise RuntimeError(
-        "Missing required environment variable. Tried: " + ", ".join(names)
-    )
+    raise RuntimeError("Missing required environment variable. Tried: " + ", ".join(names))
 
 
 def get_r2_client():
@@ -34,59 +31,53 @@ def get_r2_client():
     )
 
 
-def upload_file(s3_client, bucket_name: str, local_path: str, object_key: str) -> None:
-    path = Path(local_path)
-
+def assert_file_ready(path: Path) -> None:
     if not path.exists():
-        raise FileNotFoundError(f"Missing local file: {path}")
+        raise FileNotFoundError(f"Missing expected local file: {path}")
+    if path.stat().st_size == 0:
+        raise RuntimeError(f"Expected local file is empty: {path}")
 
-    s3_client.upload_file(
-        Filename=str(path),
-        Bucket=bucket_name,
-        Key=object_key,
-    )
 
-    print(f"Uploaded {path} -> s3://{bucket_name}/{object_key}")
+def upload_file(s3_client, bucket_name: str, local_path: Path, object_key: str) -> None:
+    assert_file_ready(local_path)
+    s3_client.upload_file(Filename=str(local_path), Bucket=bucket_name, Key=object_key)
+    print(f"Uploaded: {object_key}")
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Upload a dt+batch micro-batch to Cloudflare R2.")
+    parser.add_argument("--dt", required=True, help="Batch date in YYYY-MM-DD")
+    parser.add_argument("--batch-id", required=True, help="Batch id in YYYYMMDD_HHMM")
+    args = parser.parse_args()
+
     load_project_env()
-
     project_root = Path(__file__).resolve().parents[1]
-    manifest_path = project_root / "data" / "raw" / "latest_micro_batch.json"
 
-    if not manifest_path.exists():
-        raise FileNotFoundError(
-            f"Missing manifest: {manifest_path}. Run generate_micro_batch.py first."
-        )
+    dt = args.dt
+    batch_id = args.batch_id
 
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    customers_path = project_root / "data" / "raw" / "customers" / f"dt={dt}" / f"batch_id={batch_id}" / "customers.jsonl"
+    accounts_path = project_root / "data" / "raw" / "accounts" / f"dt={dt}" / f"batch_id={batch_id}" / "accounts.jsonl"
+    transactions_path = project_root / "data" / "raw" / "transactions" / f"dt={dt}" / f"batch_id={batch_id}" / "transactions.jsonl"
+
+    customers_key = f"customers/dt={dt}/batch_id={batch_id}/customers.jsonl"
+    accounts_key = f"accounts/dt={dt}/batch_id={batch_id}/accounts.jsonl"
+    transactions_key = f"transactions/dt={dt}/batch_id={batch_id}/transactions.jsonl"
 
     bucket_name = get_env_value("S3_BUCKET_NAME", "R2_BUCKET_NAME")
     s3_client = get_r2_client()
 
-    upload_file(
-        s3_client=s3_client,
-        bucket_name=bucket_name,
-        local_path=manifest["customers_path"],
-        object_key=manifest["customers_key"],
-    )
+    print(f"BATCH_DT={dt}")
+    print(f"BATCH_ID={batch_id}")
 
-    upload_file(
-        s3_client=s3_client,
-        bucket_name=bucket_name,
-        local_path=manifest["accounts_path"],
-        object_key=manifest["accounts_key"],
-    )
+    upload_file(s3_client, bucket_name, customers_path, customers_key)
+    upload_file(s3_client, bucket_name, accounts_path, accounts_key)
+    upload_file(s3_client, bucket_name, transactions_path, transactions_key)
 
-    upload_file(
-        s3_client=s3_client,
-        bucket_name=bucket_name,
-        local_path=manifest["transactions_path"],
-        object_key=manifest["transactions_key"],
-    )
-
-    print("Micro-batch upload completed.")
+    print("R2 keys uploaded:")
+    print(customers_key)
+    print(accounts_key)
+    print(transactions_key)
 
 
 if __name__ == "__main__":

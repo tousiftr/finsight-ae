@@ -1,24 +1,19 @@
+import argparse
 import os
 import ssl
-from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 import pg8000.dbapi
 from dotenv import load_dotenv
 
 
-def load_project_env() -> None:
-    project_root = Path(__file__).resolve().parents[1]
-    load_dotenv(project_root / ".env", override=True)
-    load_dotenv(override=False)
+load_dotenv()
 
 
 def get_neon_connection():
     database_url = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
-
     if database_url:
         parsed = urlparse(database_url)
-
         return pg8000.dbapi.connect(
             user=unquote(parsed.username or ""),
             password=unquote(parsed.password or ""),
@@ -27,101 +22,59 @@ def get_neon_connection():
             database=unquote(parsed.path.lstrip("/")),
             ssl_context=ssl.create_default_context(),
         )
-
-    return pg8000.dbapi.connect(
-        user=os.getenv("PGUSER") or os.getenv("POSTGRES_USER"),
-        password=os.getenv("PGPASSWORD") or os.getenv("POSTGRES_PASSWORD"),
-        host=os.getenv("PGHOST") or os.getenv("POSTGRES_HOST"),
-        port=int(os.getenv("PGPORT") or 5432),
-        database=os.getenv("PGDATABASE") or os.getenv("POSTGRES_DB"),
-        ssl_context=ssl.create_default_context(),
-    )
+    raise RuntimeError("Missing DATABASE_URL or NEON_DATABASE_URL")
 
 
-def fetch_all(cursor, sql: str):
-    cursor.execute(sql)
-    return cursor.fetchall()
-
-
-def print_table(rows, headers):
-    widths = [len(header) for header in headers]
-
-    for row in rows:
-        for index, value in enumerate(row):
-            widths[index] = max(widths[index], len(str(value)))
-
-    header_line = "  ".join(
-        header.ljust(widths[index]) for index, header in enumerate(headers)
-    )
-    separator_line = "  ".join("-" * width for width in widths)
-
-    print(header_line)
-    print(separator_line)
-
-    for row in rows:
-        print(
-            "  ".join(
-                str(value).ljust(widths[index]) for index, value in enumerate(row)
-            )
-        )
+def scalar(cursor, sql: str, params: tuple):
+    cursor.execute(sql, params)
+    return cursor.fetchone()[0]
 
 
 def main() -> None:
-    load_project_env()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--batch-id", required=True)
+    args = parser.parse_args()
+
     conn = get_neon_connection()
-
     try:
-        cursor = conn.cursor()
+        c = conn.cursor()
+        bid = args.batch_id
+        accounts_count = scalar(c, "select count(*) from raw.raw_accounts where batch_id = %s;", (bid,))
+        transactions_count = scalar(c, "select count(*) from raw.raw_transactions where batch_id = %s;", (bid,))
+        accounts_without_customer = scalar(c, """
+            select count(*)
+            from raw.raw_accounts a
+            left join raw.raw_customers c
+              on (a.payload->>'customer_id') = (c.payload->>'customer_id')
+             and c.batch_id = a.batch_id
+            where a.batch_id = %s and c.id is null;
+        """, (bid,))
+        transactions_without_account = scalar(c, """
+            select count(*)
+            from raw.raw_transactions t
+            left join raw.raw_accounts a
+              on (t.payload->>'account_id') = (a.payload->>'account_id')
+             and a.batch_id = t.batch_id
+            where t.batch_id = %s and a.id is null;
+        """, (bid,))
+        transaction_customer_mismatch = scalar(c, """
+            select count(*)
+            from raw.raw_transactions t
+            join raw.raw_accounts a
+              on (t.payload->>'account_id') = (a.payload->>'account_id')
+             and a.batch_id = t.batch_id
+            where t.batch_id = %s
+              and (t.payload->>'customer_id') <> (a.payload->>'customer_id');
+        """, (bid,))
 
-        counts = fetch_all(
-            cursor,
-            """
-            select 'raw_accounts' as table_name, count(*) as row_count
-            from raw.raw_accounts
+        print(f"validation counts: accounts_count={accounts_count}, transactions_count={transactions_count}, accounts_without_customer={accounts_without_customer}, transactions_without_account={transactions_without_account}, transaction_customer_mismatch={transaction_customer_mismatch}")
 
-            union all
-
-            select 'raw_transactions' as table_name, count(*) as row_count
-            from raw.raw_transactions
-
-            order by table_name;
-            """,
-        )
-
-        print("\nRaw table counts")
-        print("----------------")
-        print_table(counts, ["table_name", "row_count"])
-
-        batches = fetch_all(
-            cursor,
-            """
-            select 'accounts' as entity, dt, batch_id, source_object_key, count(*) as row_count
-            from raw.raw_accounts
-            group by dt, batch_id, source_object_key
-
-            union all
-
-            select 'transactions' as entity, dt, batch_id, source_object_key, count(*) as row_count
-            from raw.raw_transactions
-            group by dt, batch_id, source_object_key
-
-            order by dt desc nulls last, batch_id desc nulls last, entity
-            limit 20;
-            """,
-        )
-
-        print("\nLatest account and transaction batches")
-        print("---------------------------------------")
-        if batches:
-            print_table(
-                batches,
-                ["entity", "dt", "batch_id", "source_object_key", "row_count"],
-            )
-        else:
-            print("No account or transaction batches loaded yet.")
-
-        cursor.close()
-
+        if accounts_count <= 0:
+            raise RuntimeError("accounts count must be > 0")
+        if transactions_count <= 0:
+            raise RuntimeError("transactions count must be > 0")
+        if accounts_without_customer != 0 or transactions_without_account != 0 or transaction_customer_mismatch != 0:
+            raise RuntimeError("referential integrity checks failed")
     finally:
         conn.close()
 
