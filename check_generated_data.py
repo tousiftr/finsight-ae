@@ -15,6 +15,8 @@ VALID_DOCUMENT_TYPE = {"passport", "national_id", "driving_license", "residence_
 VALID_REVIEW_CHANNEL = {"automated", "manual", "hybrid"}
 VALID_REVIEWER_TYPE = {"system", "internal_reviewer", "vendor_reviewer"}
 VALID_INVESTMENT_SUBTYPE = {"crypto", "etf", "cfd", "fx"}
+VALID_ACCOUNT_TYPE = {"savings", "plus", "investment", "super", "salary"}
+VALID_TRANSACTION_TYPE = {"card_payment", "bank_transfer", "withdrawal", "deposit"}
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -31,34 +33,16 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dt")
     parser.add_argument("--batch-id")
+    parser.add_argument("--expected-customers", type=int, default=None)
+    parser.add_argument("--expected-transactions", type=int, default=None)
     parser.add_argument("--base", default="data/raw")
     return parser.parse_args()
 
 
-def resolve_batch(base: Path, dt: str | None, batch_id: str | None) -> tuple[str, str]:
-    if dt and batch_id:
-        return dt, batch_id
-    if dt or batch_id:
-        raise ValueError("Both --dt and --batch-id must be provided together.")
-
-    customers_root = base / "customers"
-    dt_dirs = sorted(
-        [p for p in customers_root.glob("dt=*") if p.is_dir()],
-        key=lambda p: p.name.split("=", 1)[1],
-    )
-    if not dt_dirs:
-        raise FileNotFoundError(f"No dt partitions found under {customers_root}")
-    latest_dt_dir = dt_dirs[-1]
-    resolved_dt = latest_dt_dir.name.split("=", 1)[1]
-
-    batch_dirs = sorted(
-        [p for p in latest_dt_dir.glob("batch_id=*") if p.is_dir()],
-        key=lambda p: p.name.split("=", 1)[1],
-    )
-    if not batch_dirs:
-        raise FileNotFoundError(f"No batch_id partitions found under {latest_dt_dir}")
-    resolved_batch_id = batch_dirs[-1].name.split("=", 1)[1]
-    return resolved_dt, resolved_batch_id
+def resolve_batch(dt: str | None, batch_id: str | None) -> tuple[str, str]:
+    if not dt or not batch_id:
+        raise ValueError("Both --dt and --batch-id are required.")
+    return dt, batch_id
 
 
 def read_expected_jsonl(path: Path) -> tuple[list[dict], int]:
@@ -71,17 +55,29 @@ def read_expected_jsonl(path: Path) -> tuple[list[dict], int]:
 def main() -> None:
     args = parse_args()
     base = Path(args.base)
-    dt, batch_id = resolve_batch(base, args.dt, args.batch_id)
+    dt, batch_id = resolve_batch(args.dt, args.batch_id)
 
-    customers, missing_errors = read_expected_jsonl(base / "customers" / f"dt={dt}" / f"batch_id={batch_id}" / "customers.jsonl")
-    accounts, missing_count = read_expected_jsonl(base / "accounts" / f"dt={dt}" / f"batch_id={batch_id}" / "accounts.jsonl")
-    missing_errors += missing_count
-    transactions, missing_count = read_expected_jsonl(base / "transactions" / f"dt={dt}" / f"batch_id={batch_id}" / "transactions.jsonl")
-    missing_errors += missing_count
-    product_events, missing_count = read_expected_jsonl(base / "product_events" / f"dt={dt}" / f"batch_id={batch_id}" / "product_events.jsonl")
-    missing_errors += missing_count
-    kyc_apps, missing_count = read_expected_jsonl(base / "kyc_applications" / f"dt={dt}" / f"batch_id={batch_id}" / "kyc_applications.jsonl")
-    missing_errors += missing_count
+    files = {
+        "customers": base / "customers" / f"dt={dt}" / f"batch_id={batch_id}" / "customers.jsonl",
+        "accounts": base / "accounts" / f"dt={dt}" / f"batch_id={batch_id}" / "accounts.jsonl",
+        "transactions": base / "transactions" / f"dt={dt}" / f"batch_id={batch_id}" / "transactions.jsonl",
+        "product_events": base / "product_events" / f"dt={dt}" / f"batch_id={batch_id}" / "product_events.jsonl",
+        "kyc_applications": base / "kyc_applications" / f"dt={dt}" / f"batch_id={batch_id}" / "kyc_applications.jsonl",
+    }
+    missing_errors = 0
+    for path in files.values():
+        if not path.exists():
+            print(f"MISSING FILE: {path.as_posix()}")
+            missing_errors += 1
+    if missing_errors:
+        print(f"local validation errors: {missing_errors}")
+        return
+
+    customers = read_jsonl(files["customers"])
+    accounts = read_jsonl(files["accounts"])
+    transactions = read_jsonl(files["transactions"])
+    product_events = read_jsonl(files["product_events"])
+    kyc_apps = read_jsonl(files["kyc_applications"])
 
     customer_ids = {c["customer_id"] for c in customers}
     accounts_by_id = {a["account_id"]: a for a in accounts}
@@ -95,12 +91,16 @@ def main() -> None:
         "invalid_review_channel", "invalid_reviewer_type", "invalid_risk_score",
         "approved_kyc_without_reviewed_at", "rejected_kyc_without_reviewed_at",
         "rejected_kyc_without_rejection_reason", "pending_kyc_with_review_or_rejection_reason",
+        "invalid_account_type", "invalid_transaction_type", "timestamps_after_dt",
+        "expected_customers_mismatch", "expected_transactions_mismatch",
     ]}
 
     for a in accounts:
         if a["customer_id"] not in customer_ids:
             checks["accounts_without_customer"] += 1
         subtype = a.get("investment_sub_type")
+        if a.get("account_type") not in VALID_ACCOUNT_TYPE:
+            checks["invalid_account_type"] += 1
         if a.get("account_type") == "investment" and subtype not in VALID_INVESTMENT_SUBTYPE:
             checks["investment_accounts_without_valid_sub_type"] += 1
         if a.get("account_type") != "investment" and subtype not in (None, ""):
@@ -108,6 +108,8 @@ def main() -> None:
 
     for t in transactions:
         acct = accounts_by_id.get(t["account_id"])
+        if t.get("transaction_type") not in VALID_TRANSACTION_TYPE:
+            checks["invalid_transaction_type"] += 1
         if acct is None:
             checks["transactions_without_account"] += 1
         elif t["customer_id"] != acct["customer_id"]:
@@ -127,7 +129,7 @@ def main() -> None:
             checks["invalid_product_event_name"] += 1
         try:
             ts = datetime.fromisoformat(str(pe.get("event_timestamp", "")).replace("Z", "+00:00"))
-            if ts.date().isoformat() != dt:
+            if ts > datetime.fromisoformat(f"{dt}T23:59:59+00:00"):
                 checks["invalid_product_event_timestamp"] += 1
         except Exception:
             checks["invalid_product_event_timestamp"] += 1
@@ -168,6 +170,28 @@ def main() -> None:
         1 for customer_id in customer_ids
         if kyc_by_customer.get(customer_id, 0) == 0
     )
+
+    dt_end = datetime.fromisoformat(f"{dt}T23:59:59+00:00")
+    timestamp_fields = [
+        (customers, "created_at"), (accounts, "opened_at"), (transactions, "transaction_timestamp"),
+        (product_events, "event_timestamp"), (kyc_apps, "submitted_at"), (kyc_apps, "reviewed_at"),
+    ]
+    for rows, field_name in timestamp_fields:
+        for row in rows:
+            ts_value = row.get(field_name)
+            if not ts_value:
+                continue
+            try:
+                ts = datetime.fromisoformat(str(ts_value).replace("Z", "+00:00"))
+                if ts > dt_end:
+                    checks["timestamps_after_dt"] += 1
+            except Exception:
+                checks["timestamps_after_dt"] += 1
+
+    if args.expected_customers is not None and len(customers) != args.expected_customers:
+        checks["expected_customers_mismatch"] = 1
+    if args.expected_transactions is not None and len(transactions) != args.expected_transactions:
+        checks["expected_transactions_mismatch"] = 1
 
     print(f"customers: {len(customers)}")
     print(f"accounts: {len(accounts)}")
