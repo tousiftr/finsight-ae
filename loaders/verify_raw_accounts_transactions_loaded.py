@@ -47,7 +47,7 @@ def main() -> None:
             left join raw.raw_customers c
               on (a.payload->>'customer_id') = (c.payload->>'customer_id')
              and c.batch_id = a.batch_id
-            where a.batch_id = %s and c.id is null;
+            where a.batch_id = %s and c.payload is null;
         """, (bid,))
         transactions_without_account = scalar(c, """
             select count(*)
@@ -55,7 +55,7 @@ def main() -> None:
             left join raw.raw_accounts a
               on (t.payload->>'account_id') = (a.payload->>'account_id')
              and a.batch_id = t.batch_id
-            where t.batch_id = %s and a.id is null;
+            where t.batch_id = %s and a.payload is null;
         """, (bid,))
         transaction_customer_mismatch = scalar(c, """
             select count(*)
