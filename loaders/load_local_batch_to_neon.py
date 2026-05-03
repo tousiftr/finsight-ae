@@ -559,10 +559,18 @@ def run_batch_validations(conn, batch_id: str) -> dict:
             select count(*)
             from raw.raw_kyc_applications ka
             left join raw.raw_customers c
-                on c.batch_id = ka.batch_id
-               and c.payload->>'customer_id' = ka.payload->>'customer_id'
+                on c.payload->>'customer_id' = ka.payload->>'customer_id'
             where ka.batch_id = %s
               and c.payload is null;
+        """,
+        "customers_without_kyc": """
+            select count(*)
+            from raw.raw_customers c
+            left join raw.raw_kyc_applications ka
+                on ka.payload->>'customer_id' = c.payload->>'customer_id'
+               and ka.batch_id = %s
+            where c.batch_id = %s
+              and ka.payload is null;
         """,
     }
 
@@ -572,7 +580,8 @@ def run_batch_validations(conn, batch_id: str) -> dict:
         output = {}
 
         for label, sql in checks.items():
-            cur.execute(sql, (batch_id,))
+            params = (batch_id, batch_id) if label == "customers_without_kyc" else (batch_id,)
+            cur.execute(sql, params)
             output[label] = cur.fetchone()[0]
 
         return output
@@ -679,6 +688,7 @@ def main() -> None:
             "product_events_without_account",
             "product_event_customer_account_mismatch",
             "kyc_applications_without_customer",
+            "customers_without_kyc",
         ]:
             print(f"{key}: {validations[key]}")
 

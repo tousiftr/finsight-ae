@@ -54,9 +54,10 @@ def main() -> None:
         "non_investment_accounts_with_investment_sub_type", "investment_accounts_without_valid_sub_type",
         "product_events_without_customer", "product_events_without_account", "product_event_customer_account_mismatch",
         "invalid_product_event_name", "invalid_product_event_timestamp", "invalid_product_event_properties",
-        "kyc_applications_without_customer", "invalid_kyc_status", "invalid_kyc_level", "invalid_document_type",
+        "customers_without_kyc", "kyc_applications_without_customer", "invalid_kyc_status", "invalid_kyc_level", "invalid_document_type",
         "invalid_review_channel", "invalid_reviewer_type", "invalid_risk_score",
-        "approved_kyc_without_reviewed_at", "rejected_kyc_without_rejection_reason",
+        "approved_kyc_without_reviewed_at", "rejected_kyc_without_reviewed_at",
+        "rejected_kyc_without_rejection_reason", "pending_kyc_with_review_or_rejection_reason",
     ]}
 
     for a in accounts:
@@ -96,7 +97,9 @@ def main() -> None:
         if not isinstance(pe.get("event_properties"), dict):
             checks["invalid_product_event_properties"] += 1
 
+    kyc_by_customer = {}
     for ka in kyc_apps:
+        kyc_by_customer[ka["customer_id"]] = kyc_by_customer.get(ka["customer_id"], 0) + 1
         if ka["customer_id"] not in customer_ids:
             checks["kyc_applications_without_customer"] += 1
         if ka.get("kyc_status") not in VALID_KYC_STATUS:
@@ -116,8 +119,18 @@ def main() -> None:
             checks["invalid_risk_score"] += 1
         if ka.get("kyc_status") == "approved" and not ka.get("reviewed_at"):
             checks["approved_kyc_without_reviewed_at"] += 1
-        if ka.get("kyc_status") == "rejected" and not ka.get("rejection_reason"):
-            checks["rejected_kyc_without_rejection_reason"] += 1
+        if ka.get("kyc_status") == "rejected":
+            if not ka.get("reviewed_at"):
+                checks["rejected_kyc_without_reviewed_at"] += 1
+            if not ka.get("rejection_reason"):
+                checks["rejected_kyc_without_rejection_reason"] += 1
+        if ka.get("kyc_status") == "pending" and (ka.get("reviewed_at") or ka.get("rejection_reason")):
+            checks["pending_kyc_with_review_or_rejection_reason"] += 1
+
+    checks["customers_without_kyc"] = sum(
+        1 for customer_id in customer_ids
+        if kyc_by_customer.get(customer_id, 0) == 0
+    )
 
     print(f"customers: {len(customers)}")
     print(f"accounts: {len(accounts)}")
