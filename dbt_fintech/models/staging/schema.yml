@@ -61,3 +61,38 @@ models:
         tests:
           - accepted_values:
               values: ['card_payment', 'bank_transfer', 'withdrawal', 'deposit']
+
+
+  - name: stg_product_events
+    columns:
+      - name: event_id
+        tests: [not_null]
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: event_name
+        tests:
+          - accepted_values:
+              values: ['app_opened','signup_started','signup_completed','kyc_started','kyc_submitted','kyc_status_viewed','account_created','deposit_started','deposit_completed','transfer_started','transfer_completed','investment_tab_viewed','crypto_buy_clicked','card_screen_viewed']
+
+  - name: stg_kyc_applications
+    columns:
+      - name: kyc_application_id
+        tests: [not_null]
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: kyc_status
+        tests:
+          - accepted_values:
+              values: ['pending','approved','rejected','manual_review','expired']
+      - name: kyc_level
+        tests:
+          - accepted_values:
+              values: ['basic','standard','enhanced']

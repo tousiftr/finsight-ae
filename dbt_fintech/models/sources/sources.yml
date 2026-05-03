@@ -80,3 +80,24 @@ sources:
             tests:
               - not_null
               - unique
+      - name: raw_product_events
+        description: Raw product event records loaded from JSONL files.
+
+        columns:
+          - name: dt
+            tests: [not_null]
+          - name: batch_id
+            tests: [not_null]
+          - name: payload
+            tests: [not_null]
+
+      - name: raw_kyc_applications
+        description: Raw KYC application records loaded from JSONL files.
+
+        columns:
+          - name: dt
+            tests: [not_null]
+          - name: batch_id
+            tests: [not_null]
+          - name: payload
+            tests: [not_null]
