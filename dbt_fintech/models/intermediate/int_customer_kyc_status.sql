@@ -20,6 +20,7 @@ with ranked_kyc as (
 
 select
     customer_id,
+    kyc_application_id,
     kyc_application_id as latest_kyc_application_id,
     kyc_status as latest_kyc_status,
     kyc_level as latest_kyc_level,
