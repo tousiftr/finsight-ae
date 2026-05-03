@@ -17,6 +17,7 @@ VALID_REVIEWER_TYPE = {"system", "internal_reviewer", "vendor_reviewer"}
 VALID_INVESTMENT_SUBTYPE = {"crypto", "etf", "cfd", "fx"}
 VALID_ACCOUNT_TYPE = {"savings", "plus", "investment", "super", "salary"}
 VALID_TRANSACTION_TYPE = {"card_payment", "bank_transfer", "withdrawal", "deposit"}
+VALID_SIGNUP_CHANNEL = {"organic", "paid_search", "referral", "partner", "social"}
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -92,8 +93,17 @@ def main() -> None:
         "approved_kyc_without_reviewed_at", "rejected_kyc_without_reviewed_at",
         "rejected_kyc_without_rejection_reason", "pending_kyc_with_review_or_rejection_reason",
         "invalid_account_type", "invalid_transaction_type", "timestamps_after_dt",
+        "customers_with_null_signup_channel", "customers_with_invalid_signup_channel",
         "expected_customers_mismatch", "expected_transactions_mismatch",
     ]}
+
+    for c in customers:
+        signup_channel = c.get("signup_channel")
+        if signup_channel is None or str(signup_channel).strip() == "":
+            checks["customers_with_null_signup_channel"] += 1
+            continue
+        if str(signup_channel).strip().lower() not in VALID_SIGNUP_CHANNEL:
+            checks["customers_with_invalid_signup_channel"] += 1
 
     for a in accounts:
         if a["customer_id"] not in customer_ids:

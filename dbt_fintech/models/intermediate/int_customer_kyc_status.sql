@@ -20,15 +20,16 @@ with ranked_kyc as (
 
 select
     customer_id,
-    kyc_application_id,
-    kyc_status,
-    kyc_level,
-    document_type,
-    review_channel,
-    reviewer_type,
-    risk_score,
-    submitted_at,
-    reviewed_at,
-    rejection_reason
+    kyc_application_id as latest_kyc_application_id,
+    kyc_status as latest_kyc_status,
+    kyc_level as latest_kyc_level,
+    risk_score as latest_risk_score,
+    submitted_at as latest_kyc_submitted_at,
+    reviewed_at as latest_kyc_reviewed_at,
+    (kyc_status = 'approved') as is_kyc_approved,
+    (kyc_status = 'rejected') as is_kyc_rejected,
+    (kyc_status = 'pending') as is_kyc_pending,
+    (kyc_status = 'manual_review') as is_kyc_manual_review,
+    (kyc_status = 'expired') as is_kyc_expired
 from ranked_kyc
 where rn = 1
