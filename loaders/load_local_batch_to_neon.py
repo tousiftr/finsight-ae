@@ -14,10 +14,14 @@ TABLE_CONFIG = [
     ("customers", "raw", "raw_customers", "customers.jsonl", "customer_id"),
     ("accounts", "raw", "raw_accounts", "accounts.jsonl", "account_id"),
     ("transactions", "raw", "raw_transactions", "transactions.jsonl", "transaction_id"),
+    ("product_events", "raw", "raw_product_events", "product_events.jsonl", "event_id"),
+    ("kyc_applications", "raw", "raw_kyc_applications", "kyc_applications.jsonl", "kyc_application_id"),
 ]
 
 DELETE_ORDER = [
     ("raw", "raw_transactions"),
+    ("raw", "raw_product_events"),
+    ("raw", "raw_kyc_applications"),
     ("raw", "raw_accounts"),
     ("raw", "raw_customers"),
 ]
@@ -26,12 +30,16 @@ LOAD_ORDER = [
     ("customers", "raw", "raw_customers", "customers.jsonl", "customer_id"),
     ("accounts", "raw", "raw_accounts", "accounts.jsonl", "account_id"),
     ("transactions", "raw", "raw_transactions", "transactions.jsonl", "transaction_id"),
+    ("product_events", "raw", "raw_product_events", "product_events.jsonl", "event_id"),
+    ("kyc_applications", "raw", "raw_kyc_applications", "kyc_applications.jsonl", "kyc_application_id"),
 ]
 
 RAW_ID_SPECS = {
     "raw_customer_id": ("customers", "customer_id", "raw_cust_"),
     "raw_account_id": ("accounts", "account_id", "raw_acct_"),
     "raw_transaction_id": ("transactions", "transaction_id", "raw_txn_"),
+    "raw_product_event_id": ("product_events", "event_id", "raw_pe_"),
+    "raw_kyc_application_id": ("kyc_applications", "kyc_application_id", "raw_kyc_"),
 }
 
 TEXT_TYPES = {
@@ -508,6 +516,43 @@ def run_batch_validations(conn, batch_id: str) -> dict:
             where t.batch_id = %s
               and t.payload->>'customer_id' <> a.payload->>'customer_id';
         """,
+        "product_events_without_customer": """
+            select count(*)
+            from raw.raw_product_events pe
+            left join raw.raw_customers c
+                on c.batch_id = pe.batch_id
+               and c.payload->>'customer_id' = pe.payload->>'customer_id'
+            where pe.batch_id = %s
+              and c.payload is null;
+        """,
+        "product_events_without_account": """
+            select count(*)
+            from raw.raw_product_events pe
+            left join raw.raw_accounts a
+                on a.batch_id = pe.batch_id
+               and a.payload->>'account_id' = pe.payload->>'account_id'
+            where pe.batch_id = %s
+              and nullif(pe.payload->>'account_id', '') is not null
+              and a.payload is null;
+        """,
+        "product_event_customer_account_mismatch": """
+            select count(*)
+            from raw.raw_product_events pe
+            join raw.raw_accounts a
+                on a.batch_id = pe.batch_id
+               and a.payload->>'account_id' = pe.payload->>'account_id'
+            where pe.batch_id = %s
+              and pe.payload->>'customer_id' <> a.payload->>'customer_id';
+        """,
+        "kyc_applications_without_customer": """
+            select count(*)
+            from raw.raw_kyc_applications ka
+            left join raw.raw_customers c
+                on c.batch_id = ka.batch_id
+               and c.payload->>'customer_id' = ka.payload->>'customer_id'
+            where ka.batch_id = %s
+              and c.payload is null;
+        """,
     }
 
     cur = conn.cursor()
@@ -603,6 +648,8 @@ def main() -> None:
             "raw.raw_customers",
             "raw.raw_accounts",
             "raw.raw_transactions",
+            "raw.raw_product_events",
+            "raw.raw_kyc_applications",
         ]:
             print(f"{table_name}: {loaded_counts[table_name]}")
 
@@ -615,6 +662,10 @@ def main() -> None:
             "accounts_without_customer",
             "transactions_without_account",
             "transaction_customer_mismatch",
+            "product_events_without_customer",
+            "product_events_without_account",
+            "product_event_customer_account_mismatch",
+            "kyc_applications_without_customer",
         ]:
             print(f"{key}: {validations[key]}")
 

@@ -65,3 +65,31 @@ create table if not exists raw.raw_transactions (
     constraint ck_raw_transactions_customer_id_format
         check ((payload ->> 'customer_id') ~ '^C[0-9]{5}$')
 );
+
+create table if not exists raw.raw_product_events (
+    id bigserial primary key,
+    raw_product_event_id text not null,
+    payload jsonb not null,
+    source_system text not null default 'cloudflare_r2',
+    source_bucket text not null,
+    source_object_key text not null,
+    source_file_path text not null,
+    dt date not null,
+    batch_id text not null,
+    raw_record_hash text not null,
+    loaded_at timestamptz not null default now()
+);
+
+create table if not exists raw.raw_kyc_applications (
+    id bigserial primary key,
+    raw_kyc_application_id text not null,
+    payload jsonb not null,
+    source_system text not null default 'cloudflare_r2',
+    source_bucket text not null,
+    source_object_key text not null,
+    source_file_path text not null,
+    dt date not null,
+    batch_id text not null,
+    raw_record_hash text not null,
+    loaded_at timestamptz not null default now()
+);
