@@ -29,22 +29,59 @@ def read_jsonl(path: Path) -> list[dict]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dt", default="2026-05-02")
-    parser.add_argument("--batch-id", default="20260502_1436")
+    parser.add_argument("--dt")
+    parser.add_argument("--batch-id")
     parser.add_argument("--base", default="data/raw")
     return parser.parse_args()
+
+
+def resolve_batch(base: Path, dt: str | None, batch_id: str | None) -> tuple[str, str]:
+    if dt and batch_id:
+        return dt, batch_id
+    if dt or batch_id:
+        raise ValueError("Both --dt and --batch-id must be provided together.")
+
+    customers_root = base / "customers"
+    dt_dirs = sorted(
+        [p for p in customers_root.glob("dt=*") if p.is_dir()],
+        key=lambda p: p.name.split("=", 1)[1],
+    )
+    if not dt_dirs:
+        raise FileNotFoundError(f"No dt partitions found under {customers_root}")
+    latest_dt_dir = dt_dirs[-1]
+    resolved_dt = latest_dt_dir.name.split("=", 1)[1]
+
+    batch_dirs = sorted(
+        [p for p in latest_dt_dir.glob("batch_id=*") if p.is_dir()],
+        key=lambda p: p.name.split("=", 1)[1],
+    )
+    if not batch_dirs:
+        raise FileNotFoundError(f"No batch_id partitions found under {latest_dt_dir}")
+    resolved_batch_id = batch_dirs[-1].name.split("=", 1)[1]
+    return resolved_dt, resolved_batch_id
+
+
+def read_expected_jsonl(path: Path) -> tuple[list[dict], int]:
+    if not path.exists():
+        print(f"MISSING FILE: {path.as_posix()}")
+        return [], 1
+    return read_jsonl(path), 0
 
 
 def main() -> None:
     args = parse_args()
     base = Path(args.base)
-    dt, batch_id = args.dt, args.batch_id
+    dt, batch_id = resolve_batch(base, args.dt, args.batch_id)
 
-    customers = read_jsonl(base / "customers" / f"dt={dt}" / f"batch_id={batch_id}" / "customers.jsonl")
-    accounts = read_jsonl(base / "accounts" / f"dt={dt}" / f"batch_id={batch_id}" / "accounts.jsonl")
-    transactions = read_jsonl(base / "transactions" / f"dt={dt}" / f"batch_id={batch_id}" / "transactions.jsonl")
-    product_events = read_jsonl(base / "product_events" / f"dt={dt}" / f"batch_id={batch_id}" / "product_events.jsonl")
-    kyc_apps = read_jsonl(base / "kyc_applications" / f"dt={dt}" / f"batch_id={batch_id}" / "kyc_applications.jsonl")
+    customers, missing_errors = read_expected_jsonl(base / "customers" / f"dt={dt}" / f"batch_id={batch_id}" / "customers.jsonl")
+    accounts, missing_count = read_expected_jsonl(base / "accounts" / f"dt={dt}" / f"batch_id={batch_id}" / "accounts.jsonl")
+    missing_errors += missing_count
+    transactions, missing_count = read_expected_jsonl(base / "transactions" / f"dt={dt}" / f"batch_id={batch_id}" / "transactions.jsonl")
+    missing_errors += missing_count
+    product_events, missing_count = read_expected_jsonl(base / "product_events" / f"dt={dt}" / f"batch_id={batch_id}" / "product_events.jsonl")
+    missing_errors += missing_count
+    kyc_apps, missing_count = read_expected_jsonl(base / "kyc_applications" / f"dt={dt}" / f"batch_id={batch_id}" / "kyc_applications.jsonl")
+    missing_errors += missing_count
 
     customer_ids = {c["customer_id"] for c in customers}
     accounts_by_id = {a["account_id"]: a for a in accounts}
@@ -138,7 +175,7 @@ def main() -> None:
     print(f"product_events: {len(product_events)}")
     print(f"kyc_applications: {len(kyc_apps)}")
 
-    total_errors = sum(checks.values())
+    total_errors = sum(checks.values()) + missing_errors
     for name, value in checks.items():
         print(f"{name}: {value}")
     print(f"local validation errors: {total_errors}")
