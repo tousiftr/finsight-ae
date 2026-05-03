@@ -19,9 +19,9 @@ TABLE_CONFIG = [
 ]
 
 DELETE_ORDER = [
-    ("raw", "raw_transactions"),
     ("raw", "raw_product_events"),
     ("raw", "raw_kyc_applications"),
+    ("raw", "raw_transactions"),
     ("raw", "raw_accounts"),
     ("raw", "raw_customers"),
 ]
@@ -489,6 +489,16 @@ def run_batch_validations(conn, batch_id: str) -> dict:
             from raw.raw_transactions
             where batch_id = %s;
         """,
+        "raw.raw_product_events": """
+            select count(*)
+            from raw.raw_product_events
+            where batch_id = %s;
+        """,
+        "raw.raw_kyc_applications": """
+            select count(*)
+            from raw.raw_kyc_applications
+            where batch_id = %s;
+        """,
         "accounts_without_customer": """
             select count(*)
             from raw.raw_accounts a
@@ -542,6 +552,7 @@ def run_batch_validations(conn, batch_id: str) -> dict:
                 on a.batch_id = pe.batch_id
                and a.payload->>'account_id' = pe.payload->>'account_id'
             where pe.batch_id = %s
+              and nullif(pe.payload->>'account_id', '') is not null
               and pe.payload->>'customer_id' <> a.payload->>'customer_id';
         """,
         "kyc_applications_without_customer": """
@@ -659,6 +670,8 @@ def main() -> None:
             "raw.raw_customers",
             "raw.raw_accounts",
             "raw.raw_transactions",
+            "raw.raw_product_events",
+            "raw.raw_kyc_applications",
             "accounts_without_customer",
             "transactions_without_account",
             "transaction_customer_mismatch",

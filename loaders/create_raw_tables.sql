@@ -68,7 +68,7 @@ create table if not exists raw.raw_transactions (
 
 create table if not exists raw.raw_product_events (
     id bigserial primary key,
-    raw_product_event_id text not null,
+    raw_product_event_id text primary key,
     payload jsonb not null,
     source_system text not null default 'cloudflare_r2',
     source_bucket text not null,
@@ -82,7 +82,7 @@ create table if not exists raw.raw_product_events (
 
 create table if not exists raw.raw_kyc_applications (
     id bigserial primary key,
-    raw_kyc_application_id text not null,
+    raw_kyc_application_id text primary key,
     payload jsonb not null,
     source_system text not null default 'cloudflare_r2',
     source_bucket text not null,
@@ -93,3 +93,12 @@ create table if not exists raw.raw_kyc_applications (
     raw_record_hash text not null,
     loaded_at timestamptz not null default now()
 );
+
+create index if not exists idx_raw_product_events_batch_id on raw.raw_product_events (batch_id);
+create index if not exists idx_raw_product_events_dt on raw.raw_product_events (dt);
+
+create index if not exists idx_raw_kyc_applications_batch_id on raw.raw_kyc_applications (batch_id);
+create index if not exists idx_raw_kyc_applications_dt on raw.raw_kyc_applications (dt);
+create index if not exists idx_raw_product_events_customer_id on raw.raw_product_events ((payload->>'customer_id'));
+create index if not exists idx_raw_product_events_account_id on raw.raw_product_events ((payload->>'account_id'));
+create index if not exists idx_raw_kyc_applications_customer_id on raw.raw_kyc_applications ((payload->>'customer_id'));
