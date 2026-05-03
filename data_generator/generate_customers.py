@@ -6,7 +6,8 @@ from faker import Faker
 
 fake = Faker()
 
-SIGNUP_CHANNELS = ["organic", "paid_search", "referral", "partner", "social"]
+SIGNUP_CHANNELS = ["organic", "paid_search", "referral", "social", "partner"]
+SIGNUP_CHANNEL_WEIGHTS = [40, 25, 15, 15, 5]
 KYC_STATUSES = ["pending", "approved", "rejected", "manual_review"]
 
 
@@ -27,7 +28,11 @@ def generate_customers(row_count: int) -> list[dict]:
                 "email": fake.unique.email(),
                 "phone_number": fake.phone_number(),
                 "country": fake.country_code(),
-                "signup_channel": random.choice(SIGNUP_CHANNELS),
+                "signup_channel": random.choices(
+                    SIGNUP_CHANNELS,
+                    weights=SIGNUP_CHANNEL_WEIGHTS,
+                    k=1,
+                )[0],
                 "kyc_status": random.choice(KYC_STATUSES),
                 "created_at": fake.date_time_between(
                     start_date="-2y",
