@@ -27,3 +27,10 @@ models:
         tests: [not_null]
       - name: currency
         tests: [not_null]
+
+  - name: int_customer_kyc_status
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+      - name: kyc_application_id
+        tests: [not_null]
