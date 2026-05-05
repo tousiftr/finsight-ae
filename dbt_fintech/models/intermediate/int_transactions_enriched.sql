@@ -4,26 +4,23 @@ select
     t.transaction_id,
     t.account_id,
     t.customer_id,
-    t.transaction_type,
-    t.transaction_timestamp,
-    t.transaction_timestamp::date as transaction_date,
+    t.transaction_ts,
+    t.transaction_ts::date as transaction_date,
     t.amount,
     t.currency,
+    t.transaction_type,
+    t.transaction_status,
     t.merchant_id,
-    t.status,
-    t.payment_method,
-    t.fee_amount,
-    t.failure_reason,
+    t.merchant_category,
     a.account_type,
-    a.investment_sub_type,
-    p.signup_channel,
-    p.customer_segment,
-    p.latest_kyc_status,
-    p.risk_segment,
-    (t.status = 'completed') as is_successful_transaction,
-    (t.status in ('failed', 'declined')) as is_failed_transaction
-from {{ ref('stg_transactions') }} t
-left join {{ ref('stg_accounts') }} a
+    a.account_status,
+    c.customer_status,
+    c.country,
+    t.batch_id,
+    c.source_file_path,
+    t.ingested_at
+from {{ ref('int_transactions') }} t
+left join {{ ref('int_accounts') }} a
     on t.account_id = a.account_id
-left join {{ ref('int_customer_profile') }} p
-    on t.customer_id = p.customer_id
+left join {{ ref('int_customers') }} c
+    on t.customer_id = c.customer_id
