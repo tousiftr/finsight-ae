@@ -1,0 +1,57 @@
+name: FinSight Seed or Micro Ingestion
+
+on:
+  workflow_dispatch:
+    inputs:
+      customer_count:
+        type: number
+        default: 1500
+      transaction_count:
+        type: number
+        default: 5000
+      product_event_count:
+        type: number
+        default: 15000
+      history_start_date:
+        type: string
+        default: "2026-01-01"
+      run_dbt_full_refresh:
+        type: boolean
+        default: true
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    env:
+      R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+      R2_REGION: auto
+      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+      NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Set batch id
+        run: |
+          echo "BATCH_DT=$(date -u +'%Y-%m-%d')" >> $GITHUB_ENV
+          echo "BATCH_ID=$(date -u +'%Y%m%d_%H%M')" >> $GITHUB_ENV
+          echo "BATCH_DT=$(date -u +'%Y-%m-%d')"
+          echo "BATCH_ID=$(date -u +'%Y%m%d_%H%M')"
+      - name: Generate
+        run: |
+          python data_generator/generate_micro_batch.py --dt "$BATCH_DT" --batch-id "$BATCH_ID" --customer-count "${{ inputs.customer_count }}" --transaction-count "${{ inputs.transaction_count }}" --history-start-date "${{ inputs.history_start_date }}" --product-event-count "${{ inputs.product_event_count }}" --seed 42
+      - name: Validate local
+        run: |
+          python check_generated_data.py --dt "$BATCH_DT" --batch-id "$BATCH_ID" --expected-customers "${{ inputs.customer_count }}" --expected-transactions "${{ inputs.transaction_count }}"
+      - name: Upload to R2
+        run: python scripts/upload_micro_batch_to_r2.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
+      - name: Load from R2 to Neon
+        run: python loaders/load_r2_batch_to_neon.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
+      - name: dbt build full refresh
+        if: ${{ inputs.run_dbt_full_refresh }}
+        run: docker run --rm --env-file .env.dbt -v "${PWD}/dbt_fintech:/usr/app" -w /usr/app finsight-dbt:local build --profiles-dir . --full-refresh
