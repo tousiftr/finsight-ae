@@ -8,8 +8,7 @@ select
     currency,
     transaction_type,
     status as transaction_status,
-    merchant_category,
+    merchant_id,
     batch_id,
-    source_file_path,
     ingested_at
 from {{ ref('stg_transactions') }}
