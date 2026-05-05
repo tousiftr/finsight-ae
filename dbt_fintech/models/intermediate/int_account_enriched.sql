@@ -4,6 +4,8 @@ select
     a.account_id,
     a.customer_id,
     a.account_type,
+    a.account_sub_type,
+    a.plan_tier,
     a.investment_sub_type,
     a.currency,
     a.account_status,
