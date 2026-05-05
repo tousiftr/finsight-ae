@@ -8,7 +8,8 @@ fake = Faker()
 
 SIGNUP_CHANNELS = ["organic", "paid_search", "referral", "social", "partner"]
 SIGNUP_CHANNEL_WEIGHTS = [40, 25, 15, 15, 5]
-KYC_STATUSES = ["pending", "approved", "rejected", "manual_review"]
+KYC_STATUSES = ["approved", "manual_review", "pending", "rejected", "expired"]
+KYC_STATUS_WEIGHTS = [75, 10, 8, 5, 2]
 
 
 def make_customer_id(index: int) -> str:
@@ -33,7 +34,11 @@ def generate_customers(row_count: int) -> list[dict]:
                     weights=SIGNUP_CHANNEL_WEIGHTS,
                     k=1,
                 )[0],
-                "kyc_status": random.choice(KYC_STATUSES),
+                "kyc_status": random.choices(
+                    KYC_STATUSES,
+                    weights=KYC_STATUS_WEIGHTS,
+                    k=1,
+                )[0],
                 "created_at": fake.date_time_between(
                     start_date="-2y",
                     end_date="now",

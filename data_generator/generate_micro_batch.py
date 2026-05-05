@@ -50,6 +50,8 @@ def random_time_between(start: datetime, end: datetime) -> datetime:
 
 
 def generate_customers(customer_count: int, batch_id: str, generated_at: datetime) -> list[dict]:
+    signup_channels = ["organic", "paid_search", "referral", "social", "partner"]
+    signup_weights = [40, 25, 15, 15, 5]
     rows = []
     for i in range(1, customer_count + 1):
         rows.append({
@@ -60,6 +62,8 @@ def generate_customers(customer_count: int, batch_id: str, generated_at: datetim
             "phone_number": fake.phone_number(),
             "country": random.choices(["BD", "US", "GB", "SG", "AE"], weights=[55, 20, 10, 10, 5], k=1)[0],
             "customer_status": random.choices(["active", "pending", "blocked"], weights=[88, 10, 2], k=1)[0],
+            "signup_channel": random.choices(signup_channels, weights=signup_weights, k=1)[0],
+            "kyc_status": None,
             "created_at": generated_at.isoformat(),
             "batch_id": batch_id,
         })
@@ -261,6 +265,11 @@ def main() -> None:
     transactions = generate_transactions_with_history(accounts, args.transaction_count, batch_id, batch_end)
     product_events = generate_product_events_with_history(customers, accounts, batch_dt, batch_id, product_event_count, batch_end)
     kyc_applications = generate_kyc_with_history(customers, batch_dt, batch_id, batch_end)
+    latest_kyc_by_customer = {}
+    for app in sorted(kyc_applications, key=lambda row: row["submitted_at"]):
+        latest_kyc_by_customer[app["customer_id"]] = app["kyc_status"]
+    for customer in customers:
+        customer["kyc_status"] = latest_kyc_by_customer.get(customer["customer_id"])
 
     base = Path(__file__).resolve().parents[1] / "data" / "raw"
     write_jsonl(base / "customers" / f"dt={batch_dt}" / f"batch_id={batch_id}" / "customers.jsonl", customers)
