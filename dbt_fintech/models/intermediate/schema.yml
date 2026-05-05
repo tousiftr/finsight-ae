@@ -10,6 +10,8 @@ models:
     columns:
       - name: account_id
         tests: [not_null, unique]
+      - name: account_sub_type
+      - name: plan_tier
 
   - name: int_transactions
     columns:

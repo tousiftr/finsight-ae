@@ -5,6 +5,8 @@ select
     c.country,
     c.created_at as customer_created_at,
     a.account_type,
+    a.account_sub_type,
+    a.plan_tier,
     a.account_status,
     a.opened_at,
     a.batch_id,
