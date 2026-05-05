@@ -8,11 +8,13 @@ models:
       - name: signup_channel
         tests:
           - accepted_values:
-              values: ['organic', 'paid_search', 'referral', 'partner', 'social']
+              arguments:
+                values: ['organic', 'paid_search', 'referral', 'partner', 'social']
       - name: kyc_status
         tests:
           - accepted_values:
-              values: ['approved', 'manual_review', 'pending', 'rejected', 'expired']
+              arguments:
+                values: ['approved', 'manual_review', 'pending', 'rejected', 'expired']
 
   - name: stg_accounts
     columns:
@@ -22,16 +24,19 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_customers')
-              field: customer_id
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
       - name: account_type
         tests:
           - accepted_values:
-              values: ['savings', 'plus', 'investment', 'super', 'salary']
+              arguments:
+                values: ['savings', 'plus', 'investment', 'super', 'salary']
       - name: investment_sub_type
         tests:
           - accepted_values:
-              values: ['crypto', 'etf', 'cfd', 'fx']
+              arguments:
+                values: ['crypto', 'etf', 'cfd', 'fx']
               config:
                 where: "investment_sub_type is not null"
 
@@ -43,22 +48,26 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_accounts')
-              field: account_id
+              arguments:
+                to: ref('stg_accounts')
+                field: account_id
       - name: customer_id
         tests:
           - not_null
           - relationships:
-              to: ref('stg_customers')
-              field: customer_id
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
       - name: transaction_type
         tests:
           - accepted_values:
-              values: ['card_payment', 'bank_transfer', 'withdrawal', 'deposit']
+              arguments:
+                values: ['card_payment', 'bank_transfer', 'withdrawal', 'deposit']
       - name: status
         tests:
           - accepted_values:
-              values: ['completed', 'pending', 'failed', 'declined']
+              arguments:
+                values: ['completed', 'pending', 'failed', 'declined']
 
   - name: stg_product_events
     columns:
@@ -68,12 +77,14 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_customers')
-              field: customer_id
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
       - name: event_name
         tests:
           - accepted_values:
-              values: ['app_opened', 'signup_started', 'signup_completed', 'kyc_started', 'kyc_submitted', 'kyc_status_viewed', 'account_created', 'deposit_started', 'deposit_completed', 'transfer_started', 'transfer_completed', 'investment_tab_viewed', 'crypto_buy_clicked', 'card_screen_viewed']
+              arguments:
+                values: ['app_opened', 'signup_started', 'signup_completed', 'kyc_started', 'kyc_submitted', 'kyc_status_viewed', 'account_created', 'deposit_started', 'deposit_completed', 'transfer_started', 'transfer_completed', 'investment_tab_viewed', 'crypto_buy_clicked', 'card_screen_viewed']
 
   - name: stg_kyc_applications
     columns:
@@ -83,13 +94,16 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_customers')
-              field: customer_id
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
       - name: kyc_status
         tests:
           - accepted_values:
-              values: ['approved', 'manual_review', 'pending', 'rejected', 'expired']
+              arguments:
+                values: ['approved', 'manual_review', 'pending', 'rejected', 'expired']
       - name: kyc_level
         tests:
           - accepted_values:
-              values: ['basic', 'standard', 'enhanced']
+              arguments:
+                values: ['basic', 'standard', 'enhanced']
