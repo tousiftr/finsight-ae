@@ -637,7 +637,7 @@ def main() -> None:
     args = parse_args()
     load_project_env()
 
-        now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(timezone.utc)
 
     s3_client = get_s3_client()
     bucket = args.bucket or get_bucket_name()
