@@ -59,12 +59,18 @@ def generate_customers(customer_count: int, batch_id: str, generated_at: datetim
             "first_name": fake.first_name(),
             "last_name": fake.last_name(),
             "email": fake.unique.email(),
-            "phone_number": fake.phone_number(),
+            "phone": fake.phone_number(),
             "country": random.choices(["BD", "US", "GB", "SG", "AE"], weights=[55, 20, 10, 10, 5], k=1)[0],
-            "customer_status": random.choices(["active", "pending", "blocked"], weights=[88, 10, 2], k=1)[0],
+            "date_of_birth": fake.date_of_birth(minimum_age=18, maximum_age=75).isoformat(),
+            "city": fake.city(),
             "signup_channel": random.choices(signup_channels, weights=signup_weights, k=1)[0],
             "kyc_status": None,
             "created_at": generated_at.isoformat(),
+            "customer_segment": random.choice(["retail","premium","student","business","high_value"]),
+            "employment_status": random.choice(["employed","self_employed","student","unemployed"]),
+            "income_band": random.choice(["low","mid","upper_mid","high"]),
+            "risk_segment": random.choice(["low","medium","high"]),
+            "dt": generated_at.strftime("%Y-%m-%d"),
             "batch_id": batch_id,
         })
     return rows
@@ -104,7 +110,7 @@ def generate_accounts_with_history(customers: list[dict], batch_id: str, batch_e
     next_account = 900001
     for customer in customers:
         created_at = datetime.fromisoformat(customer["created_at"])
-        account_count = random.choices([1, 2, 3, 4], weights=[45, 35, 15, 5], k=1)[0]
+        account_count = random.choices([1, 2, 3, 4, 5], weights=[40, 30, 20, 7, 3], k=1)[0]
         for _ in range(account_count):
             account_type = random.choice(["savings", "plus", "investment", "super", "salary"])
             investment_sub_type = random.choice(["crypto", "etf", "cfd", "fx"]) if account_type == "investment" else None
@@ -117,6 +123,10 @@ def generate_accounts_with_history(customers: list[dict], batch_id: str, batch_e
                 "currency": random.choices(["BDT", "USD", "GBP", "EUR"], weights=[65, 25, 5, 5], k=1)[0],
                 "account_status": random.choices(["active", "pending", "closed"], weights=[90, 8, 2], k=1)[0],
                 "opened_at": opened_at.isoformat(),
+                "closed_at": None,
+                "initial_balance": round(random.uniform(100, 5000),2),
+                "current_balance": round(random.uniform(50, 20000),2),
+                "dt": batch_end.strftime("%Y-%m-%d"),
                 "batch_id": batch_id,
             })
             next_account += 1
@@ -136,8 +146,7 @@ def generate_transactions(accounts: list[dict], transaction_count: int, batch_id
             "transaction_type": random.choices(["card_payment", "bank_transfer", "withdrawal", "deposit"], weights=[50, 20, 15, 15], k=1)[0],
             "amount": round(random.uniform(3, 900), 2),
             "currency": account.get("currency") or "USD",
-            "status": random.choices(["completed", "pending", "failed", "declined"], weights=[86, 7, 4, 3], k=1)[0],
-            "merchant_category": random.choice(["groceries", "food", "transport", "utilities", "ecommerce", "subscriptions", "travel", "cash_withdrawal"]),
+                        "merchant_category": random.choice(["groceries", "food", "transport", "utilities", "ecommerce", "subscriptions", "travel", "cash_withdrawal"]),
             "transaction_timestamp": generated_at.isoformat(),
             "batch_id": batch_id,
         })
@@ -159,9 +168,13 @@ def generate_transactions_with_history(accounts: list[dict], transaction_count: 
             "transaction_type": random.choices(["card_payment", "bank_transfer", "withdrawal", "deposit"], weights=[50, 20, 15, 15], k=1)[0],
             "amount": round(random.uniform(3, 900), 2),
             "currency": account.get("currency") or "USD",
-            "status": random.choices(["completed", "pending", "failed", "declined"], weights=[86, 7, 4, 3], k=1)[0],
-            "merchant_category": random.choice(["groceries", "food", "transport", "utilities", "ecommerce", "subscriptions", "travel", "cash_withdrawal"]),
+                        "merchant_id": f"M{random.randint(1,9999):04d}",
             "transaction_timestamp": transaction_time.isoformat(),
+            "status": random.choices(["completed", "pending", "failed", "declined"], weights=[88, 5, 4, 3], k=1)[0],
+            "payment_method": random.choice(["virtual_card","physical_card","bank_rail","ach"]),
+            "fee_amount": round(random.uniform(0, 6),2),
+            "failure_reason": None,
+            "dt": batch_end.strftime("%Y-%m-%d"),
             "batch_id": batch_id,
         })
     return rows

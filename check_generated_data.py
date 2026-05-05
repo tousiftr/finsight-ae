@@ -84,7 +84,7 @@ def main() -> None:
     accounts_by_id = {a["account_id"]: a for a in accounts}
 
     checks = {k: 0 for k in [
-        "accounts_without_customer", "transactions_without_account", "transaction_customer_mismatch",
+        "accounts_without_customer", "customers_without_account", "transactions_without_account", "transaction_customer_mismatch",
         "non_investment_accounts_with_investment_sub_type", "investment_accounts_without_valid_sub_type",
         "product_events_without_customer", "product_events_without_account", "product_event_customer_account_mismatch",
         "invalid_product_event_name", "invalid_product_event_timestamp", "invalid_product_event_properties",
@@ -179,6 +179,8 @@ def main() -> None:
                 checks["rejected_kyc_without_rejection_reason"] += 1
         if ka.get("kyc_status") == "pending" and (ka.get("reviewed_at") or ka.get("rejection_reason")):
             checks["pending_kyc_with_review_or_rejection_reason"] += 1
+
+    checks["customers_without_account"] = sum(1 for customer_id in customer_ids if all(a.get("customer_id")!=customer_id for a in accounts))
 
     checks["customers_without_kyc"] = sum(
         1 for customer_id in customer_ids
