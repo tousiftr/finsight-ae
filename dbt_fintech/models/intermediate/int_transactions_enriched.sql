@@ -23,5 +23,7 @@ select
     (t.status = 'completed') as is_successful_transaction,
     (t.status in ('failed', 'declined')) as is_failed_transaction
 from {{ ref('stg_transactions') }} t
-left join {{ ref('stg_accounts') }} a using (account_id)
-left join {{ ref('int_customer_profile') }} p using (customer_id)
+left join {{ ref('stg_accounts') }} a
+    on t.account_id = a.account_id
+left join {{ ref('int_customer_profile') }} p
+    on t.customer_id = p.customer_id
