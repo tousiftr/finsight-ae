@@ -32,5 +32,5 @@ models:
     columns:
       - name: customer_id
         tests: [not_null, unique]
-      - name: kyc_application_id
+      - name: latest_kyc_application_id
         tests: [not_null]
