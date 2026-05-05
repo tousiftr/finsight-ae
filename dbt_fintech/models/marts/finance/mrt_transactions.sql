@@ -9,13 +9,18 @@ select
     transaction_type,
     amount,
     currency,
-    status,
-    payment_method,
-    fee_amount,
+    transaction_status,
     merchant_id,
+    merchant_category,
     account_type,
-    customer_segment,
-    signup_channel,
-    latest_kyc_status,
-    is_successful_transaction
+    account_status,
+    customer_status,
+    country,
+    batch_id,
+    source_file_path,
+    ingested_at,
+    case
+        when lower(transaction_status) in ('approved', 'completed', 'success', 'succeeded') then true
+        else false
+    end as is_successful_transaction
 from {{ ref('int_transactions_enriched') }}
