@@ -89,6 +89,7 @@ def main() -> None:
         "product_events_without_customer", "product_events_without_account", "product_event_customer_account_mismatch",
         "invalid_product_event_name", "invalid_product_event_timestamp", "invalid_product_event_properties",
         "customers_without_kyc", "kyc_applications_without_customer", "invalid_kyc_status", "invalid_kyc_level", "invalid_document_type",
+        "null_kyc_status",
         "invalid_review_channel", "invalid_reviewer_type", "invalid_risk_score",
         "approved_kyc_without_reviewed_at", "rejected_kyc_without_reviewed_at",
         "rejected_kyc_without_rejection_reason", "pending_kyc_with_review_or_rejection_reason",
@@ -151,7 +152,10 @@ def main() -> None:
         kyc_by_customer[ka["customer_id"]] = kyc_by_customer.get(ka["customer_id"], 0) + 1
         if ka["customer_id"] not in customer_ids:
             checks["kyc_applications_without_customer"] += 1
-        if ka.get("kyc_status") not in VALID_KYC_STATUS:
+        kyc_status = ka.get("kyc_status")
+        if kyc_status is None or str(kyc_status).strip() == "":
+            checks["null_kyc_status"] += 1
+        elif kyc_status not in VALID_KYC_STATUS:
             checks["invalid_kyc_status"] += 1
         if ka.get("kyc_level") not in VALID_KYC_LEVEL:
             checks["invalid_kyc_level"] += 1
