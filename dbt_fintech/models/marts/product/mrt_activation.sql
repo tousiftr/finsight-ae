@@ -1,4 +1,4 @@
-{{ config(materialized='table') }}
+{{ config(materialized='view') }}
 
 with first_txn as (
     select customer_id, min(transaction_timestamp) as first_transaction_at

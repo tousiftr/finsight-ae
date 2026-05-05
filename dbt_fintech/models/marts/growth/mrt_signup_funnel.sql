@@ -1,7 +1,7 @@
-{{ config(materialized='table') }}
+{{ config(materialized='view') }}
 
 with activation as (
-    select * from {{ ref('fct_activation') }}
+    select * from {{ ref('mrt_activation') }}
 )
 select
     signup_date,
