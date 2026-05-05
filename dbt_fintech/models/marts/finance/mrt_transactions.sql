@@ -3,7 +3,7 @@
 select
     transaction_id,
     transaction_date,
-    transaction_timestamp,
+    transaction_ts as transaction_timestamp,
     account_id,
     customer_id,
     transaction_type,
