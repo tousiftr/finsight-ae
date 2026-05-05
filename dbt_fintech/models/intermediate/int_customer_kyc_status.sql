@@ -1,26 +1,22 @@
-with ranked_kyc as (
+{{ config(materialized='table') }}
+
+with ranked as (
     select
         customer_id,
         kyc_application_id,
         kyc_status,
         kyc_level,
-        document_type,
-        review_channel,
-        reviewer_type,
         risk_score,
         submitted_at,
         reviewed_at,
-        rejection_reason,
         row_number() over (
             partition by customer_id
             order by coalesce(reviewed_at, submitted_at) desc
         ) as rn
     from {{ ref('stg_kyc_applications') }}
 )
-
 select
     customer_id,
-    kyc_application_id,
     kyc_application_id as latest_kyc_application_id,
     kyc_status as latest_kyc_status,
     kyc_level as latest_kyc_level,
@@ -32,5 +28,5 @@ select
     (kyc_status = 'pending') as is_kyc_pending,
     (kyc_status = 'manual_review') as is_kyc_manual_review,
     (kyc_status = 'expired') as is_kyc_expired
-from ranked_kyc
+from ranked
 where rn = 1

@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: mrt_customer
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+
+  - name: mrt_account
+    columns:
+      - name: account_id
+        tests: [not_null, unique]
+
+  - name: mrt_transactions
+    columns:
+      - name: transaction_id
+        tests: [not_null, unique]
+
+  - name: mrt_daily_finance_metrics
+    columns:
+      - name: transaction_date
+        tests: [not_null]
+
+  - name: mrt_daily_active_users
+    columns:
+      - name: activity_date
+        tests: [not_null]
+
+  - name: mrt_signup_funnel
+    columns:
+      - name: signup_date
+        tests: [not_null]
+
+  - name: mrt_kyc_risk
+    columns:
+      - name: submitted_date
+        tests: [not_null]

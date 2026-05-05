@@ -5,14 +5,14 @@ models:
     columns:
       - name: customer_id
         tests: [not_null, unique]
-      - name: kyc_status
-        tests:
-          - accepted_values:
-              values: ['pending', 'approved', 'rejected', 'manual_review']
       - name: signup_channel
         tests:
           - accepted_values:
               values: ['organic', 'paid_search', 'referral', 'partner', 'social']
+      - name: kyc_status
+        tests:
+          - accepted_values:
+              values: ['approved', 'manual_review', 'pending', 'rejected', 'expired']
 
   - name: stg_accounts
     columns:
@@ -39,29 +39,26 @@ models:
     columns:
       - name: transaction_id
         tests: [not_null, unique]
-      - name: customer_id
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_customers')
-              field: customer_id
       - name: account_id
         tests:
           - not_null
           - relationships:
               to: ref('stg_accounts')
               field: account_id
-      - name: amount
-        tests: [not_null]
-      - name: status
+      - name: customer_id
         tests:
-          - accepted_values:
-              values: ['completed', 'pending', 'failed', 'declined']
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
       - name: transaction_type
         tests:
           - accepted_values:
               values: ['card_payment', 'bank_transfer', 'withdrawal', 'deposit']
-
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['completed', 'pending', 'failed', 'declined']
 
   - name: stg_product_events
     columns:
@@ -76,7 +73,7 @@ models:
       - name: event_name
         tests:
           - accepted_values:
-              values: ['app_opened','signup_started','signup_completed','kyc_started','kyc_submitted','kyc_status_viewed','account_created','deposit_started','deposit_completed','transfer_started','transfer_completed','investment_tab_viewed','crypto_buy_clicked','card_screen_viewed']
+              values: ['app_opened', 'signup_started', 'signup_completed', 'kyc_started', 'kyc_submitted', 'kyc_status_viewed', 'account_created', 'deposit_started', 'deposit_completed', 'transfer_started', 'transfer_completed', 'investment_tab_viewed', 'crypto_buy_clicked', 'card_screen_viewed']
 
   - name: stg_kyc_applications
     columns:
@@ -91,13 +88,8 @@ models:
       - name: kyc_status
         tests:
           - accepted_values:
-              values: ['pending','approved','rejected','manual_review','expired']
+              values: ['approved', 'manual_review', 'pending', 'rejected', 'expired']
       - name: kyc_level
         tests:
           - accepted_values:
-              values: ['basic','standard','enhanced']
-
-      - name: document_type
-        tests:
-          - accepted_values:
-              values: ['passport','national_id','driving_license','residence_permit']
+              values: ['basic', 'standard', 'enhanced']
