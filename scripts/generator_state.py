@@ -144,6 +144,11 @@ def load_existing_accounts(conn, limit: int = 10000) -> list[dict[str, Any]]:
             select account_id, customer_id, account_type, currency, payload
             from ranked
             where rn = 1
+              and exists (
+                  select 1
+                  from raw.raw_customers c
+                  where c.payload ->> 'customer_id' = ranked.customer_id
+              )
             order by account_id desc
             limit %s;
             """,

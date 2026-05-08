@@ -58,6 +58,41 @@ def assert_unique(rows: list[dict], key: str, label: str) -> None:
         raise ValueError(f"Duplicate {label} IDs generated: {sorted(duplicates)[:10]}")
 
 
+def validate_transaction_references(transactions: list[dict], reusable_accounts: list[dict]) -> None:
+    """Ensure generated transactions only reference known account/customer pairs."""
+    valid_accounts_by_id = {
+        account["account_id"]: account
+        for account in reusable_accounts
+        if account.get("account_id") and account.get("customer_id")
+    }
+
+    for transaction in transactions:
+        transaction_id = transaction.get("transaction_id")
+        account_id = transaction.get("account_id")
+        customer_id = transaction.get("customer_id")
+
+        if account_id is None:
+            raise ValueError(f"Transaction has null account_id; transaction_id={transaction_id}")
+        if customer_id is None:
+            raise ValueError(f"Transaction has null customer_id; transaction_id={transaction_id}")
+
+        if account_id not in valid_accounts_by_id:
+            raise ValueError(
+                f"Transaction references missing account_id={account_id}; "
+                f"transaction_id={transaction_id}"
+            )
+
+        expected_customer_id = valid_accounts_by_id[account_id]["customer_id"]
+        if customer_id != expected_customer_id:
+            raise ValueError(
+                "Transaction customer/account mismatch: "
+                f"transaction_id={transaction_id}, "
+                f"account_id={account_id}, "
+                f"customer_id={customer_id}, "
+                f"expected_customer_id={expected_customer_id}"
+            )
+
+
 def write_jsonl(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as file:
@@ -167,6 +202,7 @@ def main() -> None:
         existing_customers=state.existing_customers,
     )
 
+    validate_transaction_references(transactions, reusable_accounts)
     assert_unique(product_events, "event_id", "product event")
     assert_unique(kyc_applications, "kyc_application_id", "KYC application")
 

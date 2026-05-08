@@ -65,3 +65,21 @@ where c.customer_id is null;
 ```
 
 Expected: orphan counts should be `0` under normal validated runs.
+
+## 5) Raw transaction account referential integrity
+
+Use this query after loading generated raw data to confirm every raw transaction account ID exists in `raw.raw_accounts` before running dbt staging relationship tests:
+
+```sql
+select
+    t.payload ->> 'account_id' as account_id,
+    count(*) as orphan_transaction_count
+from raw.raw_transactions t
+left join raw.raw_accounts a
+    on t.payload ->> 'account_id' = a.payload ->> 'account_id'
+where a.payload ->> 'account_id' is null
+group by t.payload ->> 'account_id'
+order by orphan_transaction_count desc;
+```
+
+Expected: `0` rows.
