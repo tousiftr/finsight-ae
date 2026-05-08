@@ -48,6 +48,26 @@ create table if not exists raw.raw_accounts (
         )
 );
 
+
+create table if not exists raw.raw_merchants (
+    id bigserial primary key,
+    raw_merchant_id text not null,
+    merchant_id text,
+    payload jsonb not null,
+    source_system text not null default 'cloudflare_r2',
+    source_bucket text not null,
+    source_object_key text not null,
+    source_file_path text not null,
+    dt date not null,
+    batch_id text not null,
+    raw_record_hash text not null,
+    loaded_at timestamptz not null default now(),
+    constraint ck_raw_merchants_merchant_id_format
+        check (merchant_id is null or merchant_id ~ '^M[0-9]{6}$'),
+    constraint ck_raw_merchants_risk_tier
+        check ((payload ->> 'risk_tier') in ('low', 'medium', 'high'))
+);
+
 create table if not exists raw.raw_transactions (
     id bigserial primary key,
     raw_transaction_id text not null,
@@ -102,3 +122,8 @@ create index if not exists idx_raw_kyc_applications_dt on raw.raw_kyc_applicatio
 create index if not exists idx_raw_product_events_customer_id on raw.raw_product_events ((payload->>'customer_id'));
 create index if not exists idx_raw_product_events_account_id on raw.raw_product_events ((payload->>'account_id'));
 create index if not exists idx_raw_kyc_applications_customer_id on raw.raw_kyc_applications ((payload->>'customer_id'));
+
+
+create index if not exists idx_raw_merchants_batch_id on raw.raw_merchants (batch_id);
+create index if not exists idx_raw_merchants_dt on raw.raw_merchants (dt);
+create index if not exists idx_raw_merchants_merchant_id on raw.raw_merchants (merchant_id);

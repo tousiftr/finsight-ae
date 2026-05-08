@@ -38,6 +38,17 @@ models:
       - name: account_sub_type
         description: Canonical analytics subtype; legacy investment_sub_type is not exposed here.
 
+  - name: int_merchants
+    description: Canonical reusable merchant dimension with business-ready merchant attributes.
+    columns:
+      - name: merchant_id
+        description: Stable synthetic merchant identifier.
+        tests: [not_null, unique]
+      - name: merchant_risk_tier
+        description: Merchant risk tier used for transaction risk slicing.
+      - name: is_high_risk_merchant
+        description: Boolean high-risk merchant flag.
+
   - name: int_transactions
     columns:
       - name: transaction_id
@@ -54,6 +65,19 @@ models:
         description: Human-readable subtype label from account_sub_types seed.
       - name: account_sub_type_group
         description: Subtype group from account_sub_types seed.
+      - name: merchant_id
+        description: Optional merchant identifier on merchant-linked transactions.
+        tests:
+          - relationships:
+              arguments:
+                to: ref('int_merchants')
+                field: merchant_id
+              config:
+                where: "merchant_id is not null"
+      - name: merchant_risk_tier
+        description: Merchant risk tier from int_merchants.
+      - name: is_high_risk_merchant
+        description: High-risk merchant flag from int_merchants.
 
   - name: int_daily_finance_metrics
     columns:

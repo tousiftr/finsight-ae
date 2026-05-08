@@ -10,6 +10,7 @@ select
     status as transaction_status,
     merchant_id,
     merchant_category,
+    fee_amount,
     batch_id,
     ingested_at
 from {{ ref('stg_transactions') }}

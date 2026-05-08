@@ -33,6 +33,20 @@ sources:
           - name: source_object_key
             tests: [not_null]
 
+      - name: raw_merchants
+        description: Raw merchant records loaded from R2 JSONL files.
+        columns:
+          - name: payload
+            tests: [not_null]
+          - name: batch_id
+            tests: [not_null]
+          - name: dt
+            tests: [not_null]
+          - name: raw_record_hash
+            tests: [not_null]
+          - name: source_object_key
+            tests: [not_null]
+
       - name: raw_transactions
         description: Raw transaction records loaded from R2 JSONL files.
         columns:

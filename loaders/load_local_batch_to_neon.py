@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 TABLE_CONFIG = [
     ("customers", "raw", "raw_customers", "customers.jsonl", "customer_id"),
     ("accounts", "raw", "raw_accounts", "accounts.jsonl", "account_id"),
+    ("merchants", "raw", "raw_merchants", "merchants.jsonl", "merchant_id"),
     ("transactions", "raw", "raw_transactions", "transactions.jsonl", "transaction_id"),
     ("product_events", "raw", "raw_product_events", "product_events.jsonl", "event_id"),
     ("kyc_applications", "raw", "raw_kyc_applications", "kyc_applications.jsonl", "kyc_application_id"),
@@ -22,6 +23,7 @@ DELETE_ORDER = [
     ("raw", "raw_product_events"),
     ("raw", "raw_kyc_applications"),
     ("raw", "raw_transactions"),
+    ("raw", "raw_merchants"),
     ("raw", "raw_accounts"),
     ("raw", "raw_customers"),
 ]
@@ -29,6 +31,7 @@ DELETE_ORDER = [
 LOAD_ORDER = [
     ("customers", "raw", "raw_customers", "customers.jsonl", "customer_id"),
     ("accounts", "raw", "raw_accounts", "accounts.jsonl", "account_id"),
+    ("merchants", "raw", "raw_merchants", "merchants.jsonl", "merchant_id"),
     ("transactions", "raw", "raw_transactions", "transactions.jsonl", "transaction_id"),
     ("product_events", "raw", "raw_product_events", "product_events.jsonl", "event_id"),
     ("kyc_applications", "raw", "raw_kyc_applications", "kyc_applications.jsonl", "kyc_application_id"),
@@ -37,6 +40,7 @@ LOAD_ORDER = [
 RAW_ID_SPECS = {
     "raw_customer_id": ("customers", "customer_id", "raw_cust_"),
     "raw_account_id": ("accounts", "account_id", "raw_acct_"),
+    "raw_merchant_id": ("merchants", "merchant_id", "raw_mer_"),
     "raw_transaction_id": ("transactions", "transaction_id", "raw_txn_"),
     "raw_product_event_id": ("product_events", "event_id", "raw_pe_"),
     "raw_kyc_application_id": ("kyc_applications", "kyc_application_id", "raw_kyc_"),
@@ -484,6 +488,11 @@ def run_batch_validations(conn, batch_id: str) -> dict:
             from raw.raw_accounts
             where batch_id = %s;
         """,
+        "raw.raw_merchants": """
+            select count(*)
+            from raw.raw_merchants
+            where batch_id = %s;
+        """,
         "raw.raw_transactions": """
             select count(*)
             from raw.raw_transactions
@@ -525,6 +534,16 @@ def run_batch_validations(conn, batch_id: str) -> dict:
                and a.payload->>'account_id' = t.payload->>'account_id'
             where t.batch_id = %s
               and t.payload->>'customer_id' <> a.payload->>'customer_id';
+        """,
+        "transactions_without_merchant": """
+            select count(*)
+            from raw.raw_transactions t
+            left join raw.raw_merchants m
+                on m.batch_id = t.batch_id
+               and m.payload->>'merchant_id' = t.payload->>'merchant_id'
+            where t.batch_id = %s
+              and nullif(t.payload->>'merchant_id', '') is not null
+              and m.payload is null;
         """,
         "product_events_without_customer": """
             select count(*)
@@ -667,6 +686,7 @@ def main() -> None:
         for table_name in [
             "raw.raw_customers",
             "raw.raw_accounts",
+            "raw.raw_merchants",
             "raw.raw_transactions",
             "raw.raw_product_events",
             "raw.raw_kyc_applications",
@@ -678,12 +698,14 @@ def main() -> None:
         for key in [
             "raw.raw_customers",
             "raw.raw_accounts",
+            "raw.raw_merchants",
             "raw.raw_transactions",
             "raw.raw_product_events",
             "raw.raw_kyc_applications",
             "accounts_without_customer",
             "transactions_without_account",
             "transaction_customer_mismatch",
+            "transactions_without_merchant",
             "product_events_without_customer",
             "product_events_without_account",
             "product_event_customer_account_mismatch",

@@ -10,7 +10,7 @@ from object_storage.s3_client import get_bucket_name, get_s3_client
 
  
 
-DATASETS = ["customers", "accounts", "transactions", "product_events", "kyc_applications"]
+DATASETS = ["customers", "accounts", "merchants", "transactions", "product_events", "kyc_applications"]
 
 
 def local_file(root: Path, dataset: str, dt: str, batch_id: str) -> Path:
