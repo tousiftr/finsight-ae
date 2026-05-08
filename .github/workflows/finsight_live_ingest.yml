@@ -61,11 +61,17 @@ jobs:
       - name: Apply raw DDL
         run: python scripts/apply_raw_ddl.py
 
-      - name: Generate small live batch in runner temp storage
+      - name: Generate realistic live batch in runner temp storage
         run: |
           python data_generator/main.py \
-            --customer-count 20 \
-            --merchant-count 5 \
+            --customer-min 1 \
+            --customer-max 20 \
+            --merchant-min 0 \
+            --merchant-max 5 \
+            --transaction-min 20 \
+            --transaction-max 100 \
+            --event-min 100 \
+            --event-max 1000 \
             --output-dir "$RAW_OUTPUT_DIR"
 
       - name: Load generated batch into Neon raw tables
