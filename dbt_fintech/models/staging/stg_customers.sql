@@ -12,6 +12,11 @@ with ranked as (
         payload ->> 'country' as country,
         payload ->> 'city' as city,
         nullif(payload ->> 'created_at', '')::timestamptz as created_at,
+        coalesce(
+            nullif(payload ->> 'updated_at', '')::timestamptz,
+            nullif(payload ->> 'created_at', '')::timestamptz,
+            loaded_at
+        ) as updated_at,
         lower(nullif(payload ->> 'signup_channel', '')) as signup_channel,
         nullif(payload ->> 'customer_segment', '') as customer_segment,
         nullif(payload ->> 'employment_status', '') as employment_status,
@@ -25,7 +30,15 @@ with ranked as (
         loaded_at as ingested_at,
         row_number() over (
             partition by payload ->> 'customer_id'
-            order by loaded_at desc, dt desc, batch_id desc
+            order by
+                coalesce(
+                    nullif(payload ->> 'updated_at', '')::timestamptz,
+                    nullif(payload ->> 'created_at', '')::timestamptz,
+                    loaded_at
+                ) desc,
+                loaded_at desc,
+                dt desc,
+                batch_id desc
         ) as rn
     from {{ source('raw', 'raw_customers') }}
 )
@@ -40,6 +53,7 @@ select
     country,
     city,
     created_at,
+    updated_at,
     signup_channel,
     customer_segment,
     employment_status,

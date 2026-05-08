@@ -11,11 +11,11 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.append(str(SCRIPTS_DIR))
 
 from generate_accounts import generate_accounts
-from generate_customers import generate_customers
+from generate_customers import generate_customer_updates, generate_customers
 from generate_kyc import generate_kyc_applications
 from generate_merchants import generate_merchants
 from generate_product_events import generate_product_events
-from generate_transactions import generate_transactions
+from generate_transactions import generate_transaction_updates, generate_transactions
 from generator_state import GeneratorState, load_generator_state
 
 
@@ -55,13 +55,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--customer-count", type=int, default=None, help="Backward-compatible fixed customer count.")
     parser.add_argument("--merchant-count", type=int, default=None, help="Backward-compatible fixed merchant count.")
     parser.add_argument("--customer-min", type=int, default=1)
-    parser.add_argument("--customer-max", type=int, default=20)
+    parser.add_argument("--customer-max", type=int, default=10)
     parser.add_argument("--merchant-min", type=int, default=0)
-    parser.add_argument("--merchant-max", type=int, default=5)
+    parser.add_argument("--merchant-max", type=int, default=3)
     parser.add_argument("--transaction-min", type=int, default=20)
-    parser.add_argument("--transaction-max", type=int, default=100)
+    parser.add_argument("--transaction-max", type=int, default=80)
     parser.add_argument("--event-min", type=int, default=100)
-    parser.add_argument("--event-max", type=int, default=1000)
+    parser.add_argument("--event-max", type=int, default=500)
     parser.add_argument("--output-dir", default="data/raw")
     return parser.parse_args()
 
@@ -111,7 +111,7 @@ def main() -> None:
     reusable_customers = choose_reusable_customers(state, customers)
     reusable_merchants = [*merchants, *state.existing_merchants]
 
-    transactions = generate_transactions(
+    new_transactions = generate_transactions(
         reusable_accounts,
         merchants=reusable_merchants,
         batch_start=batch_start,
@@ -119,6 +119,15 @@ def main() -> None:
         batch_id=batch_id,
         transaction_count=transaction_count,
     )
+    customer_updates = generate_customer_updates(state.existing_customers, batch_start, batch_end, max_updates=5)
+    transaction_updates = generate_transaction_updates(
+        [*state.existing_transactions, *new_transactions],
+        batch_start,
+        batch_end,
+        max_updates=10,
+    )
+    customer_records = [*customers, *customer_updates]
+    transactions = [*new_transactions, *transaction_updates]
     product_events = generate_product_events(
         reusable_customers,
         reusable_accounts,
@@ -138,7 +147,7 @@ def main() -> None:
     )
 
     base = Path(args.output_dir)
-    write_jsonl(base / "customers" / f"dt={dt}" / f"batch_id={batch_id}" / "customers.jsonl", customers)
+    write_jsonl(base / "customers" / f"dt={dt}" / f"batch_id={batch_id}" / "customers.jsonl", customer_records)
     write_jsonl(base / "accounts" / f"dt={dt}" / f"batch_id={batch_id}" / "accounts.jsonl", accounts)
     write_jsonl(base / "merchants" / f"dt={dt}" / f"batch_id={batch_id}" / "merchants.jsonl", merchants)
     write_jsonl(base / "transactions" / f"dt={dt}" / f"batch_id={batch_id}" / "transactions.jsonl", transactions)
@@ -149,8 +158,11 @@ def main() -> None:
     print(f"batch_start={batch_start.isoformat()}")
     print(f"batch_end={batch_end.isoformat()}")
     print(f"new_customers={len(customers)}")
+    print(f"customer_updates={len(customer_updates)}")
     print(f"accounts={len(accounts)}")
     print(f"new_merchants={len(merchants)}")
+    print(f"new_transactions={len(new_transactions)}")
+    print(f"transaction_updates={len(transaction_updates)}")
     print(f"transactions={len(transactions)}")
     print(f"product_events={len(product_events)}")
     print(f"kyc_applications={len(kyc_applications)}")

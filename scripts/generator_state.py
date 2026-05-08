@@ -24,6 +24,7 @@ class GeneratorState:
     existing_customers: list[dict[str, Any]] = field(default_factory=list)
     existing_accounts: list[dict[str, Any]] = field(default_factory=list)
     existing_merchants: list[dict[str, Any]] = field(default_factory=list)
+    existing_transactions: list[dict[str, Any]] = field(default_factory=list)
     state_message: str = "Running without Neon state; using fallback ID seeds."
 
 
@@ -209,6 +210,56 @@ def load_existing_merchants(conn, limit: int = 1000) -> list[dict[str, Any]]:
         cursor.close()
 
 
+def load_existing_transactions(conn, limit: int = 5000) -> list[dict[str, Any]]:
+    """Load latest transaction payloads that can receive append-only status updates."""
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            with ranked as (
+                select
+                    payload ->> 'transaction_id' as transaction_id,
+                    payload,
+                    row_number() over (
+                        partition by payload ->> 'transaction_id'
+                        order by
+                            coalesce(
+                                nullif(payload ->> 'status_updated_at', '')::timestamptz,
+                                nullif(payload ->> 'updated_at', '')::timestamptz,
+                                nullif(payload ->> 'transaction_timestamp', '')::timestamptz,
+                                loaded_at
+                            ) desc,
+                            loaded_at desc,
+                            dt desc,
+                            batch_id desc
+                    ) as rn
+                from raw.raw_transactions
+                where payload ->> 'transaction_id' is not null
+            )
+            select transaction_id, payload
+            from ranked
+            where rn = 1
+              and lower(coalesce(payload ->> 'status', '')) = 'pending'
+            order by coalesce(
+                nullif(payload ->> 'status_updated_at', '')::timestamptz,
+                nullif(payload ->> 'updated_at', '')::timestamptz,
+                nullif(payload ->> 'transaction_timestamp', '')::timestamptz
+            ) desc nulls last
+            limit %s;
+            """,
+            (limit,),
+        )
+        return [
+            {
+                "transaction_id": row[0],
+                **(row[1] if isinstance(row[1], dict) else {}),
+            }
+            for row in cursor.fetchall()
+        ]
+    finally:
+        cursor.close()
+
+
 def load_generator_state() -> GeneratorState:
     """Connect to Neon and return generator state, or safe fallback state offline."""
     try:
@@ -225,6 +276,7 @@ def load_generator_state() -> GeneratorState:
             existing_customers=load_existing_customers(conn),
             existing_accounts=load_existing_accounts(conn),
             existing_merchants=load_existing_merchants(conn),
+            existing_transactions=load_existing_transactions(conn),
             state_message="Loaded generator state from Neon raw tables.",
         )
         return state

@@ -8,6 +8,18 @@ with ranked as (
         payload ->> 'customer_id' as customer_id,
         lower(nullif(payload ->> 'transaction_type', '')) as transaction_type,
         nullif(payload ->> 'transaction_timestamp', '')::timestamptz as transaction_timestamp,
+        coalesce(
+            nullif(payload ->> 'status_updated_at', '')::timestamptz,
+            nullif(payload ->> 'updated_at', '')::timestamptz,
+            nullif(payload ->> 'transaction_timestamp', '')::timestamptz,
+            loaded_at
+        ) as status_updated_at,
+        coalesce(
+            nullif(payload ->> 'updated_at', '')::timestamptz,
+            nullif(payload ->> 'status_updated_at', '')::timestamptz,
+            nullif(payload ->> 'transaction_timestamp', '')::timestamptz,
+            loaded_at
+        ) as updated_at,
         nullif(payload ->> 'amount', '')::numeric as amount,
         upper(nullif(payload ->> 'currency', '')) as currency,
         nullif(payload ->> 'merchant_id', '') as merchant_id,
@@ -22,7 +34,16 @@ with ranked as (
         loaded_at as ingested_at,
         row_number() over (
             partition by payload ->> 'transaction_id'
-            order by loaded_at desc, dt desc, batch_id desc
+            order by
+                coalesce(
+                    nullif(payload ->> 'status_updated_at', '')::timestamptz,
+                    nullif(payload ->> 'updated_at', '')::timestamptz,
+                    nullif(payload ->> 'transaction_timestamp', '')::timestamptz,
+                    loaded_at
+                ) desc,
+                loaded_at desc,
+                dt desc,
+                batch_id desc
         ) as rn
     from {{ source('raw', 'raw_transactions') }}
 )
@@ -33,6 +54,8 @@ select
     customer_id,
     transaction_type,
     transaction_timestamp,
+    status_updated_at,
+    updated_at,
     amount,
     currency,
     merchant_id,

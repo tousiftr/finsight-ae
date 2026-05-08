@@ -6,9 +6,12 @@ select
     t.customer_id,
     t.transaction_ts,
     t.transaction_ts::date as transaction_date,
+    t.status_updated_at,
+    t.updated_at,
     t.amount,
     t.currency,
     t.fee_amount,
+    t.failure_reason,
     t.transaction_type,
     tt.transaction_type_label,
     tt.transaction_flow,
@@ -38,6 +41,7 @@ select
     c.country,
     t.batch_id,
     coalesce(a.source_file_path, c.source_file_path) as source_file_path,
+    t.loaded_at,
     t.ingested_at
 from {{ ref('int_transactions') }} t
 left join {{ ref('int_account_enriched') }} a

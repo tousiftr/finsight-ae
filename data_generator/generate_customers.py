@@ -71,3 +71,38 @@ def generate_customers(row_count: int, start_number: int = 1) -> list[dict]:
         )
 
     return customers
+
+
+def generate_customer_updates(
+    existing_customers: list[dict],
+    batch_start: datetime,
+    batch_end: datetime,
+    max_updates: int = 5,
+) -> list[dict]:
+    """Create append-only newer versions for a few existing customers."""
+    candidates = [customer for customer in existing_customers if customer.get("customer_id")]
+    if not candidates or max_updates <= 0:
+        return []
+
+    update_count = random.randint(0, min(max_updates, len(candidates)))
+    if update_count == 0:
+        return []
+
+    updates: list[dict] = []
+    for customer in random.sample(candidates, k=update_count):
+        updated_customer = dict(customer)
+        current_kyc = str(updated_customer.get("kyc_status") or "").lower()
+        next_kyc_choices = [status for status in KYC_STATUSES if status != current_kyc] or KYC_STATUSES
+        current_segment = updated_customer.get("customer_segment")
+        next_segment_choices = [segment for segment in CUSTOMER_SEGMENTS if segment != current_segment] or CUSTOMER_SEGMENTS
+        current_risk = updated_customer.get("risk_segment")
+        next_risk_choices = [risk for risk in RISK_SEGMENTS if risk != current_risk] or RISK_SEGMENTS
+
+        updated_at = batch_start + (batch_end - batch_start) * random.random()
+        updated_customer["kyc_status"] = random.choices(next_kyc_choices, weights=None, k=1)[0]
+        updated_customer["risk_segment"] = random.choice(next_risk_choices)
+        updated_customer["customer_segment"] = random.choice(next_segment_choices)
+        updated_customer["updated_at"] = updated_at.isoformat()
+        updates.append(updated_customer)
+
+    return updates

@@ -1,21 +1,21 @@
-name: FinSight Live Ingest
+name: FinSight Daily dbt Snapshots
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/20 * * * *"
+    # 02:20 Bangladesh time (UTC+06:00)
+    - cron: "20 20 * * *"
 
 concurrency:
-  group: finsight-live-ingest
+  group: finsight-daily-snapshots
   cancel-in-progress: false
 
 jobs:
-  live-ingest:
+  daily-snapshots:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     env:
-      RAW_OUTPUT_DIR: /tmp/finsight_raw
       DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DATABASE_URL }}
       NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || secrets.DATABASE_URL }}
       DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
@@ -58,29 +58,10 @@ jobs:
                 threads: 4
           PROFILE
 
-      - name: Apply raw DDL
-        run: python scripts/apply_raw_ddl.py
-
-      - name: Generate realistic live batch in runner temp storage
-        run: |
-          python data_generator/main.py \
-            --customer-min 1 \
-            --customer-max 10 \
-            --merchant-min 0 \
-            --merchant-max 3 \
-            --transaction-min 20 \
-            --transaction-max 80 \
-            --event-min 100 \
-            --event-max 500 \
-            --output-dir "$RAW_OUTPUT_DIR"
-
-      - name: Load generated batch into Neon raw tables
-        run: python scripts/load_local_raw_to_neon.py --raw-root "$RAW_OUTPUT_DIR"
-
-      - name: Run dbt source freshness
+      - name: Validate dbt connection
         working-directory: dbt_fintech
-        run: dbt source freshness --profiles-dir .
+        run: dbt debug --profiles-dir .
 
-      - name: Run dbt staging models and tests only
+      - name: Run dbt snapshots only
         working-directory: dbt_fintech
-        run: dbt build --profiles-dir . --select path:models/staging
+        run: dbt snapshot --profiles-dir .

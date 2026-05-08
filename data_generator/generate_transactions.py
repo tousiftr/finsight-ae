@@ -87,6 +87,7 @@ def generate_transactions(
             fee_amount = round(max(0.25, min(25, amount * random.uniform(0.002, 0.012))), 2)
         failure_reason = random.choice(FAILURE_REASONS) if status in {"failed", "declined"} else None
 
+        transaction_timestamp = random_time_between(batch_start, batch_end)
         transactions.append(
             {
                 "transaction_id": make_transaction_id(txn_seq, batch_id),
@@ -101,9 +102,71 @@ def generate_transactions(
                 "payment_method": random.choice(PAYMENT_METHODS),
                 "fee_amount": fee_amount,
                 "failure_reason": failure_reason,
-                "transaction_timestamp": random_time_between(batch_start, batch_end).isoformat(),
+                "transaction_timestamp": transaction_timestamp.isoformat(),
+                "status_updated_at": transaction_timestamp.isoformat(),
+                "updated_at": transaction_timestamp.isoformat(),
                 "batch_id": batch_id,
             }
         )
 
     return transactions
+
+
+def generate_transaction_updates(
+    transactions: list[dict],
+    batch_start: datetime,
+    batch_end: datetime,
+    max_updates: int = 10,
+) -> list[dict]:
+    """Create append-only status updates for a few pending transactions."""
+    candidates = [txn for txn in transactions if str(txn.get("status", "")).lower() == "pending"]
+    if not candidates or max_updates <= 0:
+        return []
+
+    update_count = random.randint(0, min(max_updates, len(candidates)))
+    if update_count == 0:
+        return []
+
+    update_candidates: list[tuple[dict, datetime | None]] = []
+    for txn in candidates:
+        original_ts = None
+        original_ts_raw = txn.get("transaction_timestamp")
+        if original_ts_raw:
+            try:
+                original_ts = datetime.fromisoformat(str(original_ts_raw))
+            except ValueError:
+                original_ts = None
+        if original_ts is not None and original_ts >= batch_end:
+            continue
+        update_candidates.append((txn, original_ts))
+
+    update_count = min(update_count, len(update_candidates))
+    if update_count == 0:
+        return []
+
+    updates: list[dict] = []
+    for txn, original_ts in random.sample(update_candidates, k=update_count):
+        updated_txn = dict(txn)
+        new_status = random.choices(["completed", "failed"], weights=[78, 22], k=1)[0]
+        status_update_start = batch_start
+        if original_ts is not None:
+            status_update_start = max(batch_start, original_ts + timedelta(seconds=1))
+        status_updated_at = random_time_between(status_update_start, batch_end)
+
+        updated_txn["status"] = new_status
+        updated_txn["status_updated_at"] = status_updated_at.isoformat()
+        updated_txn["updated_at"] = status_updated_at.isoformat()
+        if new_status == "completed":
+            updated_txn["failure_reason"] = None
+            if updated_txn.get("fee_amount") is None:
+                amount = float(updated_txn.get("amount") or 0)
+                transaction_type = str(updated_txn.get("transaction_type") or "")
+                if transaction_type in {"bank_transfer", "withdrawal"} or random.random() < 0.25:
+                    updated_txn["fee_amount"] = round(max(0.25, min(25, amount * random.uniform(0.002, 0.012))), 2)
+        else:
+            updated_txn["failure_reason"] = random.choice(FAILURE_REASONS)
+            updated_txn["fee_amount"] = None
+
+        updates.append(updated_txn)
+
+    return updates
