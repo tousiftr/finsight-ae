@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: stg_seed_account_types
+    description: Staging view over the seed_account_types reference seed.
+
+  - name: stg_seed_account_sub_types
+    description: Staging view over the seed_account_sub_types reference seed.
+
+  - name: stg_seed_plan_tiers
+    description: Staging view over the seed_plan_tiers reference seed.
+
+  - name: stg_seed_transaction_types
+    description: Staging view over the seed_transaction_types reference seed.
+
+  - name: stg_seed_transaction_statuses
+    description: Staging view over the seed_transaction_statuses reference seed.
+
+  - name: stg_seed_signup_channels
+    description: Staging view over the seed_signup_channels reference seed.
+
+  - name: stg_seed_kyc_statuses
+    description: Staging view over the seed_kyc_statuses reference seed.

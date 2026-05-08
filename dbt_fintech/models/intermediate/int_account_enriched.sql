@@ -28,11 +28,11 @@ select
     p.latest_kyc_status,
     p.risk_segment
 from {{ ref('stg_accounts') }} a
-left join {{ ref('account_types') }} at
+left join {{ ref('stg_seed_account_types') }} at
     on a.account_type = at.account_type
-left join {{ ref('account_sub_types') }} ast
+left join {{ ref('stg_seed_account_sub_types') }} ast
     on a.account_sub_type = ast.account_sub_type
     and a.account_type = ast.account_type
-left join {{ ref('plan_tiers') }} pt
+left join {{ ref('stg_seed_plan_tiers') }} pt
     on a.plan_tier = pt.plan_tier
 left join {{ ref('int_customer_profile') }} p using (customer_id)
