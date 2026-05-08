@@ -68,6 +68,55 @@ create table if not exists raw.raw_merchants (
         check ((payload ->> 'risk_tier') in ('low', 'medium', 'high'))
 );
 
+-- Keep manually created raw.raw_merchants compatible with the ingestion-owned DDL.
+alter table raw.raw_merchants add column if not exists raw_merchant_id text;
+alter table raw.raw_merchants add column if not exists merchant_id text;
+alter table raw.raw_merchants add column if not exists payload jsonb;
+alter table raw.raw_merchants add column if not exists source_system text default 'cloudflare_r2';
+alter table raw.raw_merchants add column if not exists source_bucket text;
+alter table raw.raw_merchants add column if not exists source_object_key text;
+alter table raw.raw_merchants add column if not exists source_file_path text;
+alter table raw.raw_merchants add column if not exists dt date;
+alter table raw.raw_merchants add column if not exists batch_id text;
+alter table raw.raw_merchants add column if not exists raw_record_hash text;
+alter table raw.raw_merchants add column if not exists loaded_at timestamptz default now();
+
+alter table raw.raw_merchants alter column raw_merchant_id set not null;
+alter table raw.raw_merchants alter column payload set not null;
+alter table raw.raw_merchants alter column source_system set not null;
+alter table raw.raw_merchants alter column source_system set default 'cloudflare_r2';
+alter table raw.raw_merchants alter column source_bucket set not null;
+alter table raw.raw_merchants alter column source_object_key set not null;
+alter table raw.raw_merchants alter column source_file_path set not null;
+alter table raw.raw_merchants alter column dt set not null;
+alter table raw.raw_merchants alter column batch_id set not null;
+alter table raw.raw_merchants alter column raw_record_hash set not null;
+alter table raw.raw_merchants alter column loaded_at set not null;
+alter table raw.raw_merchants alter column loaded_at set default now();
+
+do $$
+begin
+    if not exists (
+        select 1 from pg_constraint
+        where conname = 'ck_raw_merchants_merchant_id_format'
+          and conrelid = 'raw.raw_merchants'::regclass
+    ) then
+        alter table raw.raw_merchants
+            add constraint ck_raw_merchants_merchant_id_format
+            check (merchant_id is null or merchant_id ~ '^M[0-9]{6}$');
+    end if;
+
+    if not exists (
+        select 1 from pg_constraint
+        where conname = 'ck_raw_merchants_risk_tier'
+          and conrelid = 'raw.raw_merchants'::regclass
+    ) then
+        alter table raw.raw_merchants
+            add constraint ck_raw_merchants_risk_tier
+            check ((payload ->> 'risk_tier') in ('low', 'medium', 'high'));
+    end if;
+end $$;
+
 create table if not exists raw.raw_transactions (
     id bigserial primary key,
     raw_transaction_id text not null,
