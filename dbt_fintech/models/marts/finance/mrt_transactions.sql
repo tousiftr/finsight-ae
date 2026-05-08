@@ -13,6 +13,8 @@ select
     merchant_id,
     merchant_category,
     account_type,
+    account_sub_type,
+    plan_tier,
     account_status,
     customer_status,
     country,

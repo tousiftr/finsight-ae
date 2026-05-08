@@ -42,14 +42,6 @@ models:
           - accepted_values:
               arguments:
                 values: ['free', 'plus', 'premium']
-      - name: investment_sub_type
-        tests:
-          - accepted_values:
-              arguments:
-                values: ['crypto', 'etf', 'cfd', 'fx']
-              config:
-                where: "investment_sub_type is not null"
-
   - name: stg_transactions
     columns:
       - name: transaction_id
