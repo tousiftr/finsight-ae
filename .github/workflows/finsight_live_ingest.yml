@@ -1,22 +1,21 @@
-name: FinSight Live Pipeline
+name: FinSight Live Ingest
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/20 * * * *"
 
 concurrency:
-  group: finsight-live-pipeline
+  group: finsight-live-ingest
   cancel-in-progress: false
 
 jobs:
-  live-pipeline:
+  live-ingest:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     env:
       RAW_OUTPUT_DIR: ${{ runner.temp }}/finsight_raw
-
       DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DATABASE_URL }}
       NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || secrets.DATABASE_URL }}
       DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
@@ -25,33 +24,22 @@ jobs:
       DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
       DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
 
-      R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL || secrets.S3_ENDPOINT_URL }}
-      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID || secrets.S3_ACCESS_KEY_ID }}
-      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY || secrets.S3_SECRET_ACCESS_KEY }}
-      R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME || secrets.S3_BUCKET_NAME }}
-      R2_REGION: auto
-      S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL || secrets.R2_ENDPOINT_URL }}
-      S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID || secrets.R2_ACCESS_KEY_ID }}
-      S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY || secrets.R2_SECRET_ACCESS_KEY }}
-      S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME || secrets.R2_BUCKET_NAME }}
-      S3_REGION: auto
-
     steps:
-      - name: Check out repo
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install Python dependencies
+      - name: Install Python and dbt dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install dbt-postgres
 
-      - name: Create dbt profile from GitHub Secrets
+      - name: Create dbt profiles.yml from GitHub Secrets
         working-directory: dbt_fintech
         run: |
           cat > profiles.yml <<'PROFILE'
@@ -71,34 +59,22 @@ jobs:
           PROFILE
 
       - name: Apply raw DDL
-        run: |
-          python scripts/apply_raw_ddl.py
+        run: python scripts/apply_raw_ddl.py
 
-      - name: Generate small live batch in temporary runner storage
+      - name: Generate small live batch in runner temp storage
         run: |
           python data_generator/main.py \
             --customer-count 20 \
             --merchant-count 5 \
             --output-dir "$RAW_OUTPUT_DIR"
 
-      - name: Upload raw batch to Cloudflare R2 permanent archive
-        run: |
-          python scripts/upload_local_raw_to_r2.py --raw-root "$RAW_OUTPUT_DIR"
-
-      - name: Load same raw batch to Neon
-        run: |
-          python scripts/load_local_raw_to_neon.py --raw-root "$RAW_OUTPUT_DIR"
+      - name: Load generated batch into Neon raw tables
+        run: python scripts/load_local_raw_to_neon.py --raw-root "$RAW_OUTPUT_DIR"
 
       - name: Run dbt source freshness
         working-directory: dbt_fintech
-        run: |
-          dbt source freshness --profiles-dir .
+        run: dbt source freshness --profiles-dir .
 
-      - name: Run dbt build
+      - name: Run dbt staging models and tests only
         working-directory: dbt_fintech
-        run: |
-          dbt build --profiles-dir .
-
-      - name: Cleanup old Neon raw rows
-        run: |
-          python scripts/cleanup_neon_raw_retention.py
+        run: dbt build --profiles-dir . --select path:models/staging

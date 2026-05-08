@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: raw
-    description: Raw data loaded from Cloudflare R2 into Neon Postgres.
+    description: Raw data loaded from generated JSONL batches into Neon Postgres.
     schema: raw
     loaded_at_field: loaded_at
     freshness:
@@ -14,7 +14,7 @@ sources:
         period: minute
     tables:
       - name: raw_customers
-        description: Raw customer records loaded from R2 JSONL files.
+        description: Raw customer records loaded from generated JSONL files.
         columns:
           - name: payload
             tests: [not_null]
@@ -30,7 +30,7 @@ sources:
             tests: [not_null]
 
       - name: raw_accounts
-        description: Raw account records loaded from R2 JSONL files.
+        description: Raw account records loaded from generated JSONL files.
         columns:
           - name: payload
             tests: [not_null]
@@ -47,14 +47,14 @@ sources:
 
       - name: raw_merchants
         description: >-
-          Raw merchant records loaded from R2 JSONL files when the merchant
+          Raw merchant records loaded from generated JSONL files when the merchant
           ingestion table is available. Merchant source tests are intentionally
           omitted so dbt can still build merchant dimensions from transaction
           merchant references in development databases that have not been
           backfilled with raw.raw_merchants yet.
 
       - name: raw_transactions
-        description: Raw transaction records loaded from R2 JSONL files.
+        description: Raw transaction records loaded from generated JSONL files.
         columns:
           - name: payload
             tests: [not_null]
