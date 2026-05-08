@@ -22,7 +22,9 @@ def random_time_between(start: datetime, end: datetime) -> datetime:
     return start + timedelta(seconds=random.randint(0, total_seconds))
 
 
-def make_transaction_id(index: int) -> str:
+def make_transaction_id(index: int, batch_id: str | None = None) -> str:
+    if batch_id:
+        return f"txn_{batch_id}_{index:06d}"
     return f"txn_{index:06d}"
 
 
@@ -50,7 +52,7 @@ def generate_transactions(
             transaction_time = random_time_between(batch_start, batch_end)
             transactions.append(
                 {
-                    "transaction_id": make_transaction_id(txn_seq),
+                    "transaction_id": make_transaction_id(txn_seq, batch_id),
                     "account_id": account["account_id"],
                     "customer_id": account["customer_id"],
                     "transaction_type": random.choice(TRANSACTION_TYPES),

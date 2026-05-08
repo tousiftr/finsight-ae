@@ -48,7 +48,7 @@ def generate_product_events(customers: list[dict], accounts: list[dict], dt: str
             event_time = day_start + timedelta(seconds=random.randint(0, 86399))
 
             rows.append({
-                "event_id": f"pe_{event_seq:06d}",
+                "event_id": f"pe_{batch_id}_{event_seq:06d}",
                 "customer_id": customer["customer_id"],
                 "account_id": account["account_id"] if account else None,
                 "session_id": f"sess_{customer['customer_id']}_{random.randint(1, 99):02d}",

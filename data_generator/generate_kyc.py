@@ -41,7 +41,7 @@ def generate_kyc_applications(customers: list[dict], dt: str, batch_id: str) -> 
             ])
 
         rows.append({
-            "kyc_application_id": f"kyc_{next_app_id:06d}",
+            "kyc_application_id": f"kyc_{batch_id}_{next_app_id:06d}",
             "customer_id": customer["customer_id"],
             "submitted_at": submitted_at.astimezone(timezone.utc).isoformat(),
             "reviewed_at": reviewed_at.astimezone(timezone.utc).isoformat() if reviewed_at else None,
@@ -83,7 +83,7 @@ def generate_kyc_applications(customers: list[dict], dt: str, batch_id: str) -> 
                 ])
 
             rows.append({
-                "kyc_application_id": f"kyc_{next_app_id:06d}",
+                "kyc_application_id": f"kyc_{batch_id}_{next_app_id:06d}",
                 "customer_id": customer["customer_id"],
                 "submitted_at": follow_up_submitted_at.astimezone(timezone.utc).isoformat(),
                 "reviewed_at": follow_up_reviewed_at.astimezone(timezone.utc).isoformat() if follow_up_reviewed_at else None,
