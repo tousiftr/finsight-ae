@@ -94,3 +94,14 @@ from (
     select 'raw.raw_kyc_applications' as table_name, source_object_key, raw_record_hash, count(*) as duplicate_count from raw.raw_kyc_applications group by source_object_key, raw_record_hash having count(*) > 1
 ) duplicates
 order by table_name, duplicate_count desc, source_object_key;
+
+-- 8) Orphan transaction account IDs should return zero rows.
+select
+    t.payload ->> 'account_id' as account_id,
+    count(*) as orphan_transaction_count
+from raw.raw_transactions t
+left join raw.raw_accounts a
+    on t.payload ->> 'account_id' = a.payload ->> 'account_id'
+where a.payload ->> 'account_id' is null
+group by t.payload ->> 'account_id'
+order by orphan_transaction_count desc;
