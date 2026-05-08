@@ -256,12 +256,13 @@ def metadata_value(column_name: str, ctx: dict):
     record = ctx["record"]
     now_utc = ctx["now_utc"]
     source_file_path = ctx["source_file_path"]
+    source_object_key = ctx["source_object_key"]
 
     values = {
         "batch_id": ctx["batch_id"],
         "dt": ctx["dt"],
         "source_bucket": ctx["source_bucket"],
-        "source_object_key": source_file_path,
+        "source_object_key": source_object_key,
         "source_file_path": source_file_path,
         "raw_file_path": source_file_path,
         "source_system": "cloudflare_r2",
@@ -670,7 +671,8 @@ def main() -> None:
             ctx_base = {
                 "batch_id": args.batch_id,
                 "dt": args.dt,
-                "source_file_path": file_paths[full_table_name],
+                "source_object_key": file_paths[full_table_name],
+                "source_file_path": f"s3://{bucket}/{file_paths[full_table_name]}",
                 "source_bucket": bucket,
                 "now_utc": now_utc,
             }

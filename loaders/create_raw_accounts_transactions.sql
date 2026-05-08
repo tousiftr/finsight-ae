@@ -13,8 +13,8 @@ create table if not exists raw.raw_accounts (
     loaded_at timestamptz not null default now()
 );
 
-create unique index if not exists ux_raw_accounts_raw_record_hash
-on raw.raw_accounts (raw_record_hash);
+create unique index if not exists ux_raw_accounts_source_object_key_raw_record_hash
+on raw.raw_accounts (source_object_key, raw_record_hash);
 
 create index if not exists ix_raw_accounts_dt_batch_id
 on raw.raw_accounts (dt, batch_id);
@@ -39,8 +39,8 @@ create table if not exists raw.raw_transactions (
     loaded_at timestamptz not null default now()
 );
 
-create unique index if not exists ux_raw_transactions_raw_record_hash
-on raw.raw_transactions (raw_record_hash);
+create unique index if not exists ux_raw_transactions_source_object_key_raw_record_hash
+on raw.raw_transactions (source_object_key, raw_record_hash);
 
 create index if not exists ix_raw_transactions_dt_batch_id
 on raw.raw_transactions (dt, batch_id);

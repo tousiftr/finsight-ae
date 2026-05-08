@@ -3,21 +3,34 @@ name: FinSight Seed or Micro Ingestion
 on:
   workflow_dispatch:
     inputs:
+      bootstrap_full_seed:
+        type: boolean
+        default: false
+        description: "One-time bootstrap only: generate the original large baseline batch."
       customer_count:
         type: number
-        default: 1500
+        default: 2
+        description: "Incremental run customer rows. Ignored when bootstrap_full_seed is true."
+      merchant_count:
+        type: number
+        default: 8
+        description: "Incremental run merchant rows. Ignored when bootstrap_full_seed is true."
       transaction_count:
         type: number
-        default: 5000
+        default: 25
+        description: "Incremental run transaction rows. Ignored when bootstrap_full_seed is true."
       product_event_count:
         type: number
-        default: 15000
+        default: 25
+        description: "Incremental run product event rows. Ignored when bootstrap_full_seed is true."
       history_start_date:
         type: string
-        default: "2026-01-01"
-      run_dbt_full_refresh:
+        default: ""
+        description: "Optional history start date. Defaults to the batch date for incremental runs."
+      run_dbt:
         type: boolean
         default: true
+        description: "Run dbt transformations after raw load. dbt does not load raw data."
 
 jobs:
   ingest:
@@ -35,28 +48,90 @@ jobs:
       S3_REGION: auto
       DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
       NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+      DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
+      DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
+      DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
+      DBT_PG_PORT: ${{ secrets.DBT_PG_PORT }}
+      DBT_PG_DATABASE: ${{ secrets.DBT_PG_DATABASE }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -r requirements.txt
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install dbt-postgres
+      - name: Create dbt profiles.yml
+        working-directory: dbt_fintech
+        run: |
+          cat > profiles.yml <<'PROFILE'
+          finsight_fintech:
+            target: dev
+            outputs:
+              dev:
+                type: postgres
+                host: "{{ env_var('DBT_PG_HOST') }}"
+                user: "{{ env_var('DBT_PG_USER') }}"
+                password: "{{ env_var('DBT_PG_PASSWORD') }}"
+                port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
+                dbname: "{{ env_var('DBT_PG_DATABASE') }}"
+                schema: dbt_rad
+                sslmode: require
+                threads: 4
+          PROFILE
       - name: Set batch id
         run: |
           echo "BATCH_DT=$(date -u +'%Y-%m-%d')" >> $GITHUB_ENV
           echo "BATCH_ID=$(date -u +'%Y%m%d_%H%M')" >> $GITHUB_ENV
           echo "BATCH_DT=$(date -u +'%Y-%m-%d')"
           echo "BATCH_ID=$(date -u +'%Y%m%d_%H%M')"
-      - name: Generate
+      - name: Resolve generation sizes
         run: |
-          python data_generator/generate_micro_batch.py --dt "$BATCH_DT" --batch-id "$BATCH_ID" --customer-count "${{ inputs.customer_count }}" --transaction-count "${{ inputs.transaction_count }}" --history-start-date "${{ inputs.history_start_date }}" --product-event-count "${{ inputs.product_event_count }}" --seed 42
+          if [ "${{ inputs.bootstrap_full_seed }}" = "true" ]; then
+            echo "GEN_CUSTOMERS=1500" >> "$GITHUB_ENV"
+            echo "GEN_MERCHANTS=250" >> "$GITHUB_ENV"
+            echo "GEN_TRANSACTIONS=5000" >> "$GITHUB_ENV"
+            echo "GEN_PRODUCT_EVENTS=15000" >> "$GITHUB_ENV"
+            echo "GEN_HISTORY_START=2026-01-01" >> "$GITHUB_ENV"
+            echo "BOOTSTRAP_MODE=true" >> "$GITHUB_ENV"
+          else
+            echo "GEN_CUSTOMERS=${{ inputs.customer_count }}" >> "$GITHUB_ENV"
+            echo "GEN_MERCHANTS=${{ inputs.merchant_count }}" >> "$GITHUB_ENV"
+            echo "GEN_TRANSACTIONS=${{ inputs.transaction_count }}" >> "$GITHUB_ENV"
+            echo "GEN_PRODUCT_EVENTS=${{ inputs.product_event_count }}" >> "$GITHUB_ENV"
+            echo "GEN_HISTORY_START=${{ inputs.history_start_date }}" >> "$GITHUB_ENV"
+            echo "BOOTSTRAP_MODE=false" >> "$GITHUB_ENV"
+          fi
+      - name: Generate one-time bootstrap or small incremental batch
+        run: |
+          HISTORY_ARG=""
+          if [ -n "$GEN_HISTORY_START" ]; then
+            HISTORY_ARG="--history-start-date $GEN_HISTORY_START"
+          fi
+          python data_generator/generate_micro_batch.py \
+            --dt "$BATCH_DT" \
+            --batch-id "$BATCH_ID" \
+            --customer-count "$GEN_CUSTOMERS" \
+            --merchant-count "$GEN_MERCHANTS" \
+            --transaction-count "$GEN_TRANSACTIONS" \
+            --product-event-count "$GEN_PRODUCT_EVENTS" \
+            $HISTORY_ARG \
+            --seed 42
       - name: Validate local
         run: |
-          python check_generated_data.py --dt "$BATCH_DT" --batch-id "$BATCH_ID" --expected-customers "${{ inputs.customer_count }}" --expected-transactions "${{ inputs.transaction_count }}"
-      - name: Upload to R2
+          python check_generated_data.py --dt "$BATCH_DT" --batch-id "$BATCH_ID" --expected-customers "$GEN_CUSTOMERS" --expected-transactions "$GEN_TRANSACTIONS"
+      - name: Upload to R2 immutable raw history
         run: python scripts/upload_micro_batch_to_r2.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
-      - name: Load from R2 to Neon
+      - name: Load raw batch from R2 to Neon idempotently
         run: python loaders/load_r2_batch_to_neon.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
-      - name: dbt build full refresh
-        if: ${{ inputs.run_dbt_full_refresh }}
-        run: docker run --rm --env-file .env.dbt -v "${PWD}/dbt_fintech:/usr/app" -w /usr/app finsight-dbt:local build --profiles-dir . --full-refresh
+      - name: Cleanup expired raw rows in Neon only
+        run: python scripts/cleanup_neon_raw_retention.py --execute
+      - name: Check raw source freshness
+        if: ${{ inputs.run_dbt }}
+        working-directory: dbt_fintech
+        run: dbt source freshness --profiles-dir .
+      - name: Build dbt models after raw load
+        if: ${{ inputs.run_dbt }}
+        working-directory: dbt_fintech
+        run: dbt build --profiles-dir .
