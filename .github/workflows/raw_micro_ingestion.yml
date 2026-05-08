@@ -12,7 +12,7 @@ concurrency:
 jobs:
   raw_micro_ingestion:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     env:
       S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
@@ -22,6 +22,11 @@ jobs:
       S3_REGION: auto
       NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
       DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+      DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
+      DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
+      DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
+      DBT_PG_PORT: ${{ secrets.DBT_PG_PORT }}
+      DBT_PG_DATABASE: ${{ secrets.DBT_PG_DATABASE }}
 
     steps:
       - name: Checkout repo
@@ -36,6 +41,26 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install dbt-postgres
+
+      - name: Create dbt profiles.yml
+        working-directory: dbt_fintech
+        run: |
+          cat > profiles.yml <<'EOF'
+          finsight_fintech:
+            target: dev
+            outputs:
+              dev:
+                type: postgres
+                host: "{{ env_var('DBT_PG_HOST') }}"
+                user: "{{ env_var('DBT_PG_USER') }}"
+                password: "{{ env_var('DBT_PG_PASSWORD') }}"
+                port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
+                dbname: "{{ env_var('DBT_PG_DATABASE') }}"
+                schema: dbt_rad
+                sslmode: require
+                threads: 4
+          EOF
 
       - name: Set batch variables
         run: |
@@ -57,17 +82,9 @@ jobs:
         run: |
           python scripts/upload_micro_batch_to_r2.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
 
-      - name: Load customers into Neon raw
+      - name: Load full raw batch into Neon
         run: |
-          python loaders/load_customers_r2_to_neon.py --key "customers/dt=$BATCH_DT/batch_id=$BATCH_ID/customers.jsonl"
-
-      - name: Load accounts into Neon raw
-        run: |
-          python loaders/load_accounts_r2_to_neon.py --key "accounts/dt=$BATCH_DT/batch_id=$BATCH_ID/accounts.jsonl"
-
-      - name: Load transactions into Neon raw
-        run: |
-          python loaders/load_transactions_r2_to_neon.py --key "transactions/dt=$BATCH_DT/batch_id=$BATCH_ID/transactions.jsonl"
+          python loaders/load_r2_batch_to_neon.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
 
       - name: Verify raw customers
         run: |
@@ -76,3 +93,11 @@ jobs:
       - name: Verify raw accounts and transactions
         run: |
           python loaders/verify_raw_accounts_transactions_loaded.py --batch-id "$BATCH_ID"
+
+      - name: Check raw source freshness
+        working-directory: dbt_fintech
+        run: dbt source freshness --profiles-dir .
+
+      - name: Build dbt models
+        working-directory: dbt_fintech
+        run: dbt build --profiles-dir .
