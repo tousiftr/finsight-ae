@@ -7,14 +7,28 @@ models:
         tests: [not_null, unique]
 
   - name: mrt_account
+    description: Account mart exposing canonical account_sub_type and lookup labels/groups. the investment subtype flag is intentionally not exposed.
     columns:
       - name: account_id
         tests: [not_null, unique]
+      - name: account_sub_type
+        description: Canonical account subtype for mart consumers.
+      - name: account_sub_type_label
+        description: Human-readable subtype label from account_sub_types seed.
+      - name: account_sub_type_group
+        description: Subtype group from account_sub_types seed.
 
   - name: mrt_transactions
+    description: Transaction mart enriched with canonical account_sub_type and seed labels/groups; legacy investment_sub_type is not used for analytics.
     columns:
       - name: transaction_id
         tests: [not_null, unique]
+      - name: account_sub_type
+        description: Canonical account subtype for transaction analytics.
+      - name: account_sub_type_label
+        description: Human-readable subtype label from account_sub_types seed.
+      - name: account_sub_type_group
+        description: Subtype group from account_sub_types seed.
 
   - name: mrt_daily_finance_metrics
     columns:

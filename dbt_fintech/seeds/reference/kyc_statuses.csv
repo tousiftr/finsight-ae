@@ -1,0 +1,6 @@
+kyc_status,kyc_status_label,is_approved,is_terminal,is_active
+approved,Approved,true,true,true
+manual_review,Manual Review,false,false,true
+pending,Pending,false,false,true
+rejected,Rejected,false,true,true
+expired,Expired,false,true,true

@@ -1,0 +1,4 @@
+plan_tier,plan_tier_label,plan_tier_rank,is_paid_tier,is_active
+free,Free,1,false,true
+plus,Plus,2,true,true
+premium,Premium,3,true,true
