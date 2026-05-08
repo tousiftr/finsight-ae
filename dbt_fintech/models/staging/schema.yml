@@ -37,11 +37,15 @@ models:
           - accepted_values:
               arguments:
                 values: ['instant_access', 'goal_savings', 'high_yield', 'emergency', 'standard_checking', 'crypto', 'etf', 'cfd', 'fx', 'brokerage', 'retirement_super', 'salary_account']
+              config:
+                where: "account_sub_type is not null"
       - name: plan_tier
         tests:
           - accepted_values:
               arguments:
                 values: ['free', 'plus', 'premium']
+              config:
+                where: "plan_tier is not null"
       - name: investment_sub_type
         tests:
           - accepted_values:

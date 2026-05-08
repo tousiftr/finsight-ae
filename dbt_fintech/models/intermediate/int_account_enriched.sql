@@ -16,5 +16,5 @@ select
     p.customer_segment,
     p.latest_kyc_status,
     p.risk_segment
-from {{ ref('stg_accounts') }} a
+from {{ ref('int_accounts') }} a
 left join {{ ref('int_customer_profile') }} p using (customer_id)

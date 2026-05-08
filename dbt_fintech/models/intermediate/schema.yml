@@ -12,6 +12,7 @@ models:
         tests: [not_null, unique]
       - name: account_sub_type
       - name: plan_tier
+      - name: investment_sub_type
 
   - name: int_transactions
     columns:

@@ -15,6 +15,7 @@ select
     a.account_type,
     a.account_sub_type,
     a.plan_tier,
+    a.investment_sub_type,
     a.account_status,
     c.customer_status,
     c.country,

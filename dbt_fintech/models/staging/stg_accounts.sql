@@ -6,9 +6,23 @@ with ranked as (
         payload ->> 'account_id' as account_id,
         payload ->> 'customer_id' as customer_id,
         lower(nullif(payload ->> 'account_type', '')) as account_type,
-        lower(nullif(payload ->> 'account_sub_type', '')) as account_sub_type,
+        case
+            when lower(nullif(payload ->> 'account_type', '')) = 'investment'
+                then lower(coalesce(
+                    nullif(payload ->> 'account_sub_type', ''),
+                    nullif(payload ->> 'investment_sub_type', '')
+                ))
+            else lower(nullif(payload ->> 'account_sub_type', ''))
+        end as account_sub_type,
         lower(nullif(payload ->> 'plan_tier', '')) as plan_tier,
-        lower(nullif(payload ->> 'investment_sub_type', '')) as investment_sub_type,
+        case
+            when lower(nullif(payload ->> 'account_type', '')) = 'investment'
+                then lower(coalesce(
+                    nullif(payload ->> 'investment_sub_type', ''),
+                    nullif(payload ->> 'account_sub_type', '')
+                ))
+            else null
+        end as investment_sub_type,
         upper(nullif(payload ->> 'currency', '')) as currency,
         lower(nullif(payload ->> 'account_status', '')) as account_status,
         nullif(payload ->> 'opened_at', '')::timestamptz as opened_at,
