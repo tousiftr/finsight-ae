@@ -72,6 +72,7 @@ def generate_product_events(
     accounts: list[dict],
     dt: str,
     batch_id: str,
+    generator_run_id: str,
     event_count: int | None = None,
     batch_start: datetime | None = None,
     batch_end: datetime | None = None,
@@ -96,7 +97,7 @@ def generate_product_events(
     sessions = [
         {
             "customer": customer,
-            "session_id": f"sess_{batch_id}_{customer['customer_id']}_{idx:04d}",
+            "session_id": f"sess_{batch_id}_{generator_run_id}_{customer['customer_id']}_{idx:04d}",
             "platform": random.choice(["ios", "android", "web"]),
             "device_type": random.choice(["mobile", "tablet", "desktop"]),
             "app_version": random.choice(["2.3.1", "2.3.2", "2.4.0", "2.4.1"]),
@@ -117,7 +118,7 @@ def generate_product_events(
 
         rows.append(
             {
-                "event_id": f"pe_{batch_id}_{event_seq:06d}",
+                "event_id": f"pe_{batch_id}_{generator_run_id}_{event_seq:06d}",
                 "customer_id": customer["customer_id"],
                 "account_id": account["account_id"] if account else None,
                 "session_id": session["session_id"],
