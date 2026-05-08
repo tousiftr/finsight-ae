@@ -1,3 +1,4 @@
+-- depends_on: {{ ref('stg_accounts') }}
 {{ config(materialized='table') }}
 
 select
