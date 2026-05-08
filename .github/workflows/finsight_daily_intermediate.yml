@@ -1,0 +1,67 @@
+name: FinSight Daily Intermediate dbt
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 02:00 Bangladesh time (UTC+06:00)
+    - cron: "0 20 * * *"
+
+concurrency:
+  group: finsight-daily-intermediate
+  cancel-in-progress: false
+
+jobs:
+  daily-intermediate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DATABASE_URL }}
+      NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || secrets.DATABASE_URL }}
+      DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
+      DBT_PG_PORT: ${{ secrets.DBT_PG_PORT }}
+      DBT_PG_DATABASE: ${{ secrets.DBT_PG_DATABASE }}
+      DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
+      DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python and dbt dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install dbt-postgres
+
+      - name: Create dbt profiles.yml from GitHub Secrets
+        working-directory: dbt_fintech
+        run: |
+          cat > profiles.yml <<'PROFILE'
+          finsight_fintech:
+            target: dev
+            outputs:
+              dev:
+                type: postgres
+                host: "{{ env_var('DBT_PG_HOST') }}"
+                user: "{{ env_var('DBT_PG_USER') }}"
+                password: "{{ env_var('DBT_PG_PASSWORD') }}"
+                port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
+                dbname: "{{ env_var('DBT_PG_DATABASE') }}"
+                schema: dbt_rad
+                sslmode: require
+                threads: 4
+          PROFILE
+
+      - name: Run dbt source freshness
+        working-directory: dbt_fintech
+        run: dbt source freshness --profiles-dir .
+
+      - name: Run dbt intermediate models only
+        working-directory: dbt_fintech
+        run: dbt build --profiles-dir . --select path:models/intermediate
