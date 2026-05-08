@@ -1,0 +1,92 @@
+name: FinSight Live Pipeline
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
+
+jobs:
+  live-pipeline:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+
+      DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
+      DBT_PG_PORT: ${{ secrets.DBT_PG_PORT }}
+      DBT_PG_DATABASE: ${{ secrets.DBT_PG_DATABASE }}
+      DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
+      DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
+
+      R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+
+      RAW_OUTPUT_DIR: ${{ runner.temp }}/finsight_raw
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Apply raw DDL
+        run: |
+          python scripts/apply_raw_ddl.py
+
+      - name: Generate live batch in temporary runner storage
+        run: |
+          python data_generator/main.py \
+            --customer-count 20 \
+            --merchant-count 5 \
+            --output-dir "$RAW_OUTPUT_DIR"
+
+      - name: Upload raw batch to Cloudflare R2
+        run: |
+          python scripts/upload_local_raw_to_r2.py --raw-root "$RAW_OUTPUT_DIR"
+
+      - name: Load raw batch to Neon
+        run: |
+          python scripts/load_local_raw_to_neon.py --raw-root "$RAW_OUTPUT_DIR"
+
+      - name: Build dbt image
+        run: |
+          docker build -t finsight-dbt:local ./dbt_fintech
+
+      - name: Run dbt source freshness
+        run: |
+          docker run --rm \
+            -e DBT_PG_HOST="$DBT_PG_HOST" \
+            -e DBT_PG_PORT="$DBT_PG_PORT" \
+            -e DBT_PG_DATABASE="$DBT_PG_DATABASE" \
+            -e DBT_PG_USER="$DBT_PG_USER" \
+            -e DBT_PG_PASSWORD="$DBT_PG_PASSWORD" \
+            -v "${GITHUB_WORKSPACE}/dbt_fintech:/usr/app" \
+            -w /usr/app \
+            finsight-dbt:local source freshness --profiles-dir .
+
+      - name: Run dbt build
+        run: |
+          docker run --rm \
+            -e DBT_PG_HOST="$DBT_PG_HOST" \
+            -e DBT_PG_PORT="$DBT_PG_PORT" \
+            -e DBT_PG_DATABASE="$DBT_PG_DATABASE" \
+            -e DBT_PG_USER="$DBT_PG_USER" \
+            -e DBT_PG_PASSWORD="$DBT_PG_PASSWORD" \
+            -v "${GITHUB_WORKSPACE}/dbt_fintech:/usr/app" \
+            -w /usr/app \
+            finsight-dbt:local build --profiles-dir .
+
+      - name: Cleanup old Neon raw rows
+        run: |
+          python scripts/cleanup_neon_raw_retention.py
