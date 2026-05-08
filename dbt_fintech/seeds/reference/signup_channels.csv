@@ -1,0 +1,6 @@
+signup_channel,signup_channel_label,channel_group,is_paid,is_active
+organic,Organic,organic,false,true
+paid_search,Paid Search,paid,true,true
+referral,Referral,referral,false,true
+partner,Partner,partner,false,true
+social,Social,organic,false,true

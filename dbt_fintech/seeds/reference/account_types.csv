@@ -1,0 +1,6 @@
+account_type,account_type_label,account_type_group,is_active
+savings,Savings,deposit,true
+plus,Plus,deposit,true
+investment,Investment,investment,true
+super,Super,retirement,true
+salary,Salary,deposit,true

@@ -1,0 +1,5 @@
+transaction_type,transaction_type_label,transaction_flow,is_active
+card_payment,Card Payment,debit,true
+bank_transfer,Bank Transfer,transfer,true
+withdrawal,Withdrawal,debit,true
+deposit,Deposit,credit,true

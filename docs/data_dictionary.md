@@ -37,20 +37,39 @@
 - **Important tests:** `customer_id` not null + unique.
 
 ### stg_accounts
-- **Purpose:** Typed/cleaned account records with customer linkage.
-- **Grain:** One row per account.
+- **Purpose:** Typed/cleaned account records with customer linkage and canonical subtype fallback logic.
+- **Grain:** One row per account, deduped by `account_id` using latest `loaded_at`, `dt`, and `batch_id` ordering.
 - **Source models:** `source('raw', 'raw_accounts')`.
 - **Materialization:** `view`.
-- **Key columns:** `account_id`, `customer_id`.
-- **Important tests:** `account_id` not null + unique; `customer_id` not null + relationships to `stg_customers.customer_id`.
+- **Key columns:** `account_id`, `customer_id`, `account_type`, `account_sub_type`, `plan_tier`.
+- **Subtype contract:** `account_type` stays broad, `account_sub_type` is canonical, and `plan_tier` is independent. Legacy raw `investment_sub_type` may backfill missing investment subtypes only; `is_investment_sub_type` is intentionally not used.
+- **Important tests:** `account_id` not null + unique; `customer_id` relationships to `stg_customers.customer_id`; `account_type`, `account_sub_type`, and `plan_tier` relationships to lookup seeds; account subtype/account type consistency test.
 
 ### stg_transactions
 - **Purpose:** Typed/cleaned transaction records with account/customer linkage.
-- **Grain:** One row per transaction.
+- **Grain:** One row per transaction, deduped by `transaction_id` using latest `loaded_at`, `dt`, and `batch_id` ordering.
 - **Source models:** `source('raw', 'raw_transactions')`.
 - **Materialization:** `view`.
 - **Key columns:** `transaction_id`, `account_id`, `customer_id`, `amount`, `transaction_status`.
 - **Important tests:** `transaction_id` not null + unique; `account_id` and `customer_id` relationship tests; accepted status domain.
+
+## Reference seeds (`dbt_rad` seed tables)
+
+### account_types
+- **Purpose:** Lookup for broad account types and their labels/groups.
+- **Grain:** One row per `account_type`.
+
+### account_sub_types
+- **Purpose:** Lookup for canonical account subtypes. Every `account_sub_type` maps to exactly one valid parent `account_type`, replacing any need for investment-subtype flags.
+- **Grain:** One row per `account_sub_type`.
+
+### plan_tiers
+- **Purpose:** Lookup for plan tiers and paid-tier attributes. Plan tier is separate from account type and subtype.
+- **Grain:** One row per `plan_tier`.
+
+### transaction_types, transaction_statuses, signup_channels, kyc_statuses
+- **Purpose:** Domain lookups used by staging relationship tests and downstream labels/status attributes.
+- **Grain:** One row per domain value.
 
 ## Intermediate layer (`dbt_rad.int_*`)
 
@@ -63,7 +82,7 @@
 - **Important tests:** `customer_id` not null + unique.
 
 ### int_accounts
-- **Purpose:** Trusted account base table.
+- **Purpose:** Trusted account base table enriched with account type, account subtype, and plan tier lookup labels/groups.
 - **Grain:** One row per account.
 - **Source models:** `stg_accounts`.
 - **Materialization:** `table`.
@@ -89,7 +108,7 @@
 ### int_transactions_enriched
 - **Purpose:** Transaction-level truth table enriched with account/customer context.
 - **Grain:** One row per transaction.
-- **Source models:** `int_transactions`, `int_accounts`, `int_customers`.
+- **Source models:** `int_transactions`, `int_account_enriched`, `int_customers`, transaction lookup seeds.
 - **Materialization:** `table`.
 - **Key columns:** `transaction_id`, `account_id`, `customer_id`, `transaction_date`, `amount`, `transaction_status`.
 - **Important tests:** `transaction_id` not null + unique.

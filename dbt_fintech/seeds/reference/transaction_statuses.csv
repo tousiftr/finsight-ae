@@ -1,0 +1,5 @@
+transaction_status,transaction_status_label,is_success,is_terminal,is_active
+completed,Completed,true,true,true
+pending,Pending,false,false,true
+failed,Failed,false,true,true
+declined,Declined,false,true,true

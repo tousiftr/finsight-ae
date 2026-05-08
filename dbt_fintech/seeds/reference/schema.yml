@@ -1,0 +1,104 @@
+version: 2
+
+seeds:
+  - name: account_types
+    description: Broad account type lookup. account_type stays broad and is validated from this seed.
+    columns:
+      - name: account_type
+        description: Broad canonical account type.
+        tests: [not_null, unique]
+      - name: account_type_label
+        tests: [not_null]
+      - name: account_type_group
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]
+
+  - name: account_sub_types
+    description: Canonical account subtype lookup. Each account_sub_type maps to exactly one valid parent account_type.
+    columns:
+      - name: account_sub_type
+        description: Canonical account subtype used by analytics and marts.
+        tests: [not_null, unique]
+      - name: account_type
+        description: Parent broad account type for this subtype.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('account_types')
+                field: account_type
+      - name: account_sub_type_label
+        tests: [not_null]
+      - name: account_sub_type_group
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]
+
+  - name: plan_tiers
+    description: Plan tier lookup. Plan tier is separate from account type and account subtype.
+    columns:
+      - name: plan_tier
+        tests: [not_null, unique]
+      - name: plan_tier_label
+        tests: [not_null]
+      - name: plan_tier_rank
+        tests: [not_null, unique]
+      - name: is_paid_tier
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]
+
+  - name: transaction_types
+    description: Transaction type lookup used to validate staged transactions.
+    columns:
+      - name: transaction_type
+        tests: [not_null, unique]
+      - name: transaction_type_label
+        tests: [not_null]
+      - name: transaction_flow
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]
+
+  - name: transaction_statuses
+    description: Transaction status lookup used to validate staged transactions.
+    columns:
+      - name: transaction_status
+        tests: [not_null, unique]
+      - name: transaction_status_label
+        tests: [not_null]
+      - name: is_success
+        tests: [not_null]
+      - name: is_terminal
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]
+
+  - name: signup_channels
+    description: Signup channel lookup used to validate staged customers.
+    columns:
+      - name: signup_channel
+        tests: [not_null, unique]
+      - name: signup_channel_label
+        tests: [not_null]
+      - name: channel_group
+        tests: [not_null]
+      - name: is_paid
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]
+
+  - name: kyc_statuses
+    description: KYC status lookup used to validate staged customer and KYC records.
+    columns:
+      - name: kyc_status
+        tests: [not_null, unique]
+      - name: kyc_status_label
+        tests: [not_null]
+      - name: is_approved
+        tests: [not_null]
+      - name: is_terminal
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]

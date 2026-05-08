@@ -2,21 +2,25 @@ version: 2
 
 models:
   - name: stg_customers
+    description: Staged customers deduped by customer_id using the latest loaded_at, dt, and batch_id ordering.
     columns:
       - name: customer_id
         tests: [not_null, unique]
       - name: signup_channel
         tests:
-          - accepted_values:
+          - relationships:
               arguments:
-                values: ['organic', 'paid_search', 'referral', 'partner', 'social']
+                to: ref('signup_channels')
+                field: signup_channel
       - name: kyc_status
         tests:
-          - accepted_values:
+          - relationships:
               arguments:
-                values: ['approved', 'manual_review', 'pending', 'rejected', 'expired']
+                to: ref('kyc_statuses')
+                field: kyc_status
 
   - name: stg_accounts
+    description: Staged accounts deduped by account_id. account_sub_type is the canonical analytics subtype; legacy raw investment_sub_type is only used as a fallback when investment account_sub_type is missing. the investment subtype flag is intentionally not used.
     columns:
       - name: account_id
         tests: [not_null, unique]
@@ -28,21 +32,32 @@ models:
                 to: ref('stg_customers')
                 field: customer_id
       - name: account_type
+        description: Broad account type validated against the account_types seed.
         tests:
-          - accepted_values:
+          - not_null
+          - relationships:
               arguments:
-                values: ['savings', 'plus', 'investment', 'super', 'salary']
+                to: ref('account_types')
+                field: account_type
       - name: account_sub_type
+        description: Canonical account subtype for analytics and marts. account_sub_types maps every subtype to exactly one parent account_type.
         tests:
-          - accepted_values:
+          - not_null
+          - relationships:
               arguments:
-                values: ['instant_access', 'goal_savings', 'high_yield', 'emergency', 'standard_checking', 'crypto', 'etf', 'cfd', 'fx', 'brokerage', 'retirement_super', 'salary_account']
+                to: ref('account_sub_types')
+                field: account_sub_type
       - name: plan_tier
+        description: Canonical plan tier, separate from account type and subtype.
         tests:
-          - accepted_values:
+          - not_null
+          - relationships:
               arguments:
-                values: ['free', 'plus', 'premium']
+                to: ref('plan_tiers')
+                field: plan_tier
+
   - name: stg_transactions
+    description: Staged transactions deduped by transaction_id using the latest loaded_at, dt, and batch_id ordering.
     columns:
       - name: transaction_id
         tests: [not_null, unique]
@@ -62,16 +77,19 @@ models:
                 field: customer_id
       - name: transaction_type
         tests:
-          - accepted_values:
+          - relationships:
               arguments:
-                values: ['card_payment', 'bank_transfer', 'withdrawal', 'deposit']
+                to: ref('transaction_types')
+                field: transaction_type
       - name: status
         tests:
-          - accepted_values:
+          - relationships:
               arguments:
-                values: ['completed', 'pending', 'failed', 'declined']
+                to: ref('transaction_statuses')
+                field: transaction_status
 
   - name: stg_product_events
+    description: Staged product events deduped by event_id using the latest loaded_at, dt, and batch_id ordering.
     columns:
       - name: event_id
         tests: [not_null, unique]
@@ -89,6 +107,7 @@ models:
                 values: ['app_opened', 'signup_started', 'signup_completed', 'kyc_started', 'kyc_submitted', 'kyc_status_viewed', 'account_created', 'deposit_started', 'deposit_completed', 'transfer_started', 'transfer_completed', 'investment_tab_viewed', 'crypto_buy_clicked', 'card_screen_viewed']
 
   - name: stg_kyc_applications
+    description: Staged KYC applications deduped by kyc_application_id using the latest loaded_at, dt, and batch_id ordering.
     columns:
       - name: kyc_application_id
         tests: [not_null, unique]
@@ -101,9 +120,10 @@ models:
                 field: customer_id
       - name: kyc_status
         tests:
-          - accepted_values:
+          - relationships:
               arguments:
-                values: ['approved', 'manual_review', 'pending', 'rejected', 'expired']
+                to: ref('kyc_statuses')
+                field: kyc_status
       - name: kyc_level
         tests:
           - accepted_values:

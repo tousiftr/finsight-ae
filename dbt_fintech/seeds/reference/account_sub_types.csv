@@ -1,0 +1,13 @@
+account_sub_type,account_type,account_sub_type_label,account_sub_type_group,is_active
+instant_access,savings,Instant Access,savings,true
+goal_savings,savings,Goal Savings,savings,true
+high_yield,savings,High Yield,savings,true
+emergency,savings,Emergency Savings,savings,true
+standard_checking,plus,Standard Checking,checking,true
+crypto,investment,Crypto,investment,true
+etf,investment,ETF,investment,true
+cfd,investment,CFD,investment,true
+fx,investment,FX,investment,true
+brokerage,investment,Brokerage,investment,true
+retirement_super,super,Retirement Super,retirement,true
+salary_account,salary,Salary Account,salary,true

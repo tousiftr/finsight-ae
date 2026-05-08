@@ -7,11 +7,36 @@ models:
         tests: [not_null, unique]
 
   - name: int_accounts
+    description: Account intermediate model joined to lookup seeds. account_sub_type is canonical; the account_sub_types seed maps each subtype to one account_type and replaces any need for an investment subtype flag.
+    columns:
+      - name: account_id
+        tests: [not_null, unique]
+      - name: account_type
+        description: Broad account type from stg_accounts.
+      - name: account_type_label
+        description: Label from account_types seed.
+      - name: account_type_group
+        description: Group from account_types seed.
+      - name: account_sub_type
+        description: Canonical account subtype from stg_accounts.
+      - name: account_sub_type_label
+        description: Label from account_sub_types seed.
+      - name: account_sub_type_group
+        description: Group from account_sub_types seed.
+      - name: plan_tier
+        description: Plan tier, separate from account type and subtype.
+      - name: plan_tier_label
+        description: Label from plan_tiers seed.
+      - name: is_paid_tier
+        description: Paid tier flag from plan_tiers seed.
+
+  - name: int_account_enriched
+    description: Enriched account model that propagates canonical account_sub_type and seed labels/groups for downstream marts.
     columns:
       - name: account_id
         tests: [not_null, unique]
       - name: account_sub_type
-      - name: plan_tier
+        description: Canonical analytics subtype; legacy investment_sub_type is not exposed here.
 
   - name: int_transactions
     columns:
@@ -19,9 +44,16 @@ models:
         tests: [not_null, unique]
 
   - name: int_transactions_enriched
+    description: Transaction model enriched with canonical account_sub_type and lookup labels/groups. Analytics should use account_sub_type, not legacy investment_sub_type.
     columns:
       - name: transaction_id
         tests: [not_null, unique]
+      - name: account_sub_type
+        description: Canonical subtype inherited from int_account_enriched.
+      - name: account_sub_type_label
+        description: Human-readable subtype label from account_sub_types seed.
+      - name: account_sub_type_group
+        description: Subtype group from account_sub_types seed.
 
   - name: int_daily_finance_metrics
     columns:

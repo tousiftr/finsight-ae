@@ -7,22 +7,29 @@ select
     account_id,
     customer_id,
     transaction_type,
+    transaction_type_label,
+    transaction_flow,
     amount,
     currency,
     transaction_status,
+    transaction_status_label,
     merchant_id,
     merchant_category,
     account_type,
+    account_type_label,
+    account_type_group,
     account_sub_type,
+    account_sub_type_label,
+    account_sub_type_group,
     plan_tier,
+    plan_tier_label,
+    plan_tier_rank,
+    is_paid_tier,
     account_status,
     customer_status,
     country,
     batch_id,
     source_file_path,
     ingested_at,
-    case
-        when lower(transaction_status) in ('approved', 'completed', 'success', 'succeeded') then true
-        else false
-    end as is_successful_transaction
+    coalesce(is_successful_status, lower(transaction_status) in ('approved', 'completed', 'success', 'succeeded')) as is_successful_transaction
 from {{ ref('int_transactions_enriched') }}

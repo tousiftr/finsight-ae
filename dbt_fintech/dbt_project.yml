@@ -24,3 +24,8 @@ models:
 
     mart:
       +materialized: view
+
+
+seeds:
+  finsight_fintech:
+    +quote_columns: false
