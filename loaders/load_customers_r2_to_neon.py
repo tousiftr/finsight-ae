@@ -177,8 +177,8 @@ def ensure_raw_customers_table(conn):
 
     cursor.execute(
         """
-        create unique index if not exists raw_customers_raw_record_hash_uq
-        on raw.raw_customers (raw_record_hash);
+        create unique index if not exists ux_raw_customers_source_object_key_raw_record_hash
+        on raw.raw_customers (source_object_key, raw_record_hash);
         """
     )
 
@@ -257,6 +257,7 @@ def load_records_to_neon(
         "payload",
         "dt",
         "batch_id",
+        "source_object_key",
         "raw_record_hash",
     }
 
@@ -315,7 +316,7 @@ def load_records_to_neon(
             )
             values
                 {values_sql}
-            on conflict (raw_record_hash) do nothing;
+            on conflict (source_object_key, raw_record_hash) do nothing;
         """
 
         cursor.execute(insert_sql, tuple(flat_params))

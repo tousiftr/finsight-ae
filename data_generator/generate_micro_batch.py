@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 import random
 from datetime import datetime, timezone, timedelta
@@ -25,7 +26,7 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
 
 
 def choose_customer_count() -> int:
-    return random.choices([0, 1, 2], weights=[25, 55, 20], k=1)[0]
+    return random.choices([1, 2, 3], weights=[55, 30, 15], k=1)[0]
 
 
 def choose_transaction_count(now: datetime) -> int:
@@ -38,6 +39,25 @@ def choose_transaction_count(now: datetime) -> int:
         return random.randint(8, 25)
     return random.randint(2, 8)
 
+
+
+def choose_merchant_count() -> int:
+    return random.randint(5, 12)
+
+
+def batch_numeric_offset(batch_id: str, *, lower: int, upper: int, needed: int = 1) -> int:
+    """Return a deterministic ID offset that keeps incremental batch IDs stable.
+
+    The generator is intentionally stateless for scheduled GitHub Actions runs, so
+    business identifiers derive from batch_id instead of restarting at C00001/A900001
+    every run. Keep the one-time bootstrap deterministic by passing a fixed batch_id
+    and seed from the workflow.
+    """
+    if needed < 1:
+        needed = 1
+    span = max((upper - lower + 1) - needed, 1)
+    digest = hashlib.sha256(batch_id.encode("utf-8")).hexdigest()
+    return lower + (int(digest[:12], 16) % span)
 
 def parse_iso_date(date_text: str) -> datetime:
     return datetime.fromisoformat(f"{date_text}T00:00:00+00:00")
@@ -54,9 +74,11 @@ def generate_customers(customer_count: int, batch_id: str, generated_at: datetim
     signup_channels = ["organic", "paid_search", "referral", "social", "partner"]
     signup_weights = [40, 25, 15, 15, 5]
     rows = []
-    for i in range(1, customer_count + 1):
+    start_customer = batch_numeric_offset(batch_id, lower=1, upper=99999, needed=customer_count)
+    for i in range(customer_count):
+        customer_number = start_customer + i
         rows.append({
-            "customer_id": f"C{i:05d}",
+            "customer_id": f"C{customer_number:05d}",
             "first_name": fake.first_name(),
             "last_name": fake.last_name(),
             "email": fake.unique.email(),
@@ -86,7 +108,7 @@ def generate_customers_with_history(customer_count: int, batch_id: str, history_
 
 def generate_accounts(customers: list[dict], batch_id: str, generated_at: datetime) -> list[dict]:
     rows = []
-    next_account = 900001
+    next_account = batch_numeric_offset(batch_id, lower=100000, upper=999999, needed=max(len(customers) * 5, 1))
     for customer in customers:
         account_count = random.choices([1, 2], weights=[85, 15], k=1)[0]
         for _ in range(account_count):
@@ -108,7 +130,7 @@ def generate_accounts(customers: list[dict], batch_id: str, generated_at: dateti
 
 def generate_accounts_with_history(customers: list[dict], batch_id: str, batch_end: datetime) -> list[dict]:
     rows = []
-    next_account = 900001
+    next_account = batch_numeric_offset(batch_id, lower=100000, upper=999999, needed=max(len(customers) * 5, 1))
     for customer in customers:
         created_at = datetime.fromisoformat(customer["created_at"])
         account_count = random.choices([1, 2, 3, 4, 5], weights=[40, 30, 20, 7, 3], k=1)[0]
@@ -143,7 +165,7 @@ def generate_transactions(accounts: list[dict], merchants: list[dict], transacti
         merchant = random.choice(merchants)
         transaction_time = random_time_between(batch_start, batch_end)
         rows.append({
-            "transaction_id": f"txn_{i:06d}",
+            "transaction_id": f"txn_{batch_id}_{i:06d}",
             "account_id": account["account_id"],
             "customer_id": account["customer_id"],
             "transaction_type": random.choices(["card_payment", "bank_transfer", "withdrawal", "deposit"], weights=[50, 20, 15, 15], k=1)[0],
@@ -166,7 +188,7 @@ def generate_transactions_with_history(accounts: list[dict], merchants: list[dic
         merchant = random.choice(merchants)
         transaction_time = random_time_between(batch_start, batch_end)
         rows.append({
-            "transaction_id": f"txn_{i:06d}",
+            "transaction_id": f"txn_{batch_id}_{i:06d}",
             "account_id": account["account_id"],
             "customer_id": account["customer_id"],
             "transaction_type": random.choices(["card_payment", "bank_transfer", "withdrawal", "deposit"], weights=[50, 20, 15, 15], k=1)[0],
@@ -186,6 +208,9 @@ def generate_transactions_with_history(accounts: list[dict], merchants: list[dic
 
 
 def generate_product_events_with_history(customers: list[dict], accounts: list[dict], dt: str, batch_id: str, event_count: int, batch_end: datetime) -> list[dict]:
+    if not customers:
+        return []
+
     account_by_customer: dict[str, list[dict]] = {}
     customer_by_id = {c["customer_id"]: c for c in customers}
     for account in accounts:
@@ -204,7 +229,7 @@ def generate_product_events_with_history(customers: list[dict], accounts: list[d
         account = random.choice(customer_accounts) if customer_accounts and random.random() < 0.6 else None
         event_time = random_time_between(customer_created, batch_end)
         rows.append({
-            "event_id": f"pe_{i:06d}",
+            "event_id": f"pe_{batch_id}_{i:06d}",
             "customer_id": customer["customer_id"],
             "account_id": account["account_id"] if account else None,
             "session_id": f"sess_{customer['customer_id']}_{random.randint(1, 99):02d}",
@@ -238,7 +263,7 @@ def generate_kyc_with_history(customers: list[dict], dt: str, batch_id: str, bat
         if status == "rejected":
             rejection_reason = random.choice(reasons)
         rows.append({
-            "kyc_application_id": f"kyc_{i:06d}",
+            "kyc_application_id": f"kyc_{batch_id}_{i:06d}",
             "customer_id": customer["customer_id"],
             "submitted_at": submitted_at.isoformat(),
             "reviewed_at": reviewed_at.isoformat() if reviewed_at else None,
@@ -260,9 +285,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Generate a small realistic FinSight micro-batch.")
     parser.add_argument("--dt", type=str, default=None)
     parser.add_argument("--batch-id", type=str, default=None)
-    parser.add_argument("--customer-count", type=int, default=100)
-    parser.add_argument("--merchant-count", type=int, default=250)
-    parser.add_argument("--transaction-count", type=int, default=1200)
+    parser.add_argument("--customer-count", type=int, default=None)
+    parser.add_argument("--merchant-count", type=int, default=None)
+    parser.add_argument("--transaction-count", type=int, default=None)
     parser.add_argument("--history-start-date", type=str, default=None)
     parser.add_argument("--product-event-count", type=int, default=None)
     parser.add_argument("--seed", type=int, default=None)
@@ -280,12 +305,19 @@ def main() -> None:
         Faker.seed(args.seed)
     history_start_date = args.history_start_date or batch_dt
     history_start = parse_iso_date(history_start_date)
-    product_event_count = args.product_event_count if args.product_event_count is not None else args.customer_count * 10
+    customer_count = args.customer_count if args.customer_count is not None else choose_customer_count()
+    merchant_count = args.merchant_count if args.merchant_count is not None else choose_merchant_count()
+    transaction_count = args.transaction_count if args.transaction_count is not None else choose_transaction_count(batch_end)
+    product_event_count = (
+        args.product_event_count
+        if args.product_event_count is not None
+        else max(customer_count * 3, transaction_count)
+    )
 
-    customers = generate_customers_with_history(args.customer_count, batch_id, history_start, batch_end)
+    customers = generate_customers_with_history(customer_count, batch_id, history_start, batch_end)
     accounts = generate_accounts_with_history(customers, batch_id, batch_end)
-    merchants = generate_merchants(args.merchant_count, batch_id, batch_start, batch_end)
-    transactions = generate_transactions_with_history(accounts, merchants, args.transaction_count, batch_id, batch_start, batch_end)
+    merchants = generate_merchants(merchant_count, batch_id, batch_start, batch_end)
+    transactions = generate_transactions_with_history(accounts, merchants, transaction_count, batch_id, batch_start, batch_end)
     product_events = generate_product_events_with_history(customers, accounts, batch_dt, batch_id, product_event_count, batch_end)
     kyc_applications = generate_kyc_with_history(customers, batch_dt, batch_id, batch_end)
     latest_kyc_by_customer = {}

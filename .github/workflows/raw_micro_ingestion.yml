@@ -79,7 +79,7 @@ jobs:
           echo "BATCH_ID=$BATCH_ID"
           echo "RUN_STARTED_AT=$RUN_STARTED_AT"
 
-      - name: Generate realistic fintech micro-batch
+      - name: Generate small incremental fintech micro-batch
         run: |
           python data_generator/generate_micro_batch.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
 
@@ -87,9 +87,13 @@ jobs:
         run: |
           python scripts/upload_micro_batch_to_r2.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
 
-      - name: Load full raw batch into Neon
+      - name: Load raw batch from R2 to Neon idempotently
         run: |
           python loaders/load_r2_batch_to_neon.py --dt "$BATCH_DT" --batch-id "$BATCH_ID"
+
+      - name: Cleanup expired raw rows in Neon only
+        run: |
+          python scripts/cleanup_neon_raw_retention.py --execute
 
       - name: Verify raw customers
         run: |
