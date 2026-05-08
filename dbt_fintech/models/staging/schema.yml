@@ -10,13 +10,13 @@ models:
         tests:
           - relationships:
               arguments:
-                to: ref('signup_channels')
+                to: ref('stg_seed_signup_channels')
                 field: signup_channel
       - name: kyc_status
         tests:
           - relationships:
               arguments:
-                to: ref('kyc_statuses')
+                to: ref('stg_seed_kyc_statuses')
                 field: kyc_status
 
   - name: stg_accounts
@@ -37,7 +37,7 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('account_types')
+                to: ref('stg_seed_account_types')
                 field: account_type
       - name: account_sub_type
         description: Canonical account subtype for analytics and marts. account_sub_types maps every subtype to exactly one parent account_type.
@@ -45,7 +45,7 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('account_sub_types')
+                to: ref('stg_seed_account_sub_types')
                 field: account_sub_type
       - name: plan_tier
         description: Canonical plan tier, separate from account type and subtype.
@@ -53,7 +53,7 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('plan_tiers')
+                to: ref('stg_seed_plan_tiers')
                 field: plan_tier
 
   - name: stg_transactions
@@ -79,13 +79,13 @@ models:
         tests:
           - relationships:
               arguments:
-                to: ref('transaction_types')
+                to: ref('stg_seed_transaction_types')
                 field: transaction_type
       - name: status
         tests:
           - relationships:
               arguments:
-                to: ref('transaction_statuses')
+                to: ref('stg_seed_transaction_statuses')
                 field: transaction_status
 
   - name: stg_product_events
@@ -122,7 +122,7 @@ models:
         tests:
           - relationships:
               arguments:
-                to: ref('kyc_statuses')
+                to: ref('stg_seed_kyc_statuses')
                 field: kyc_status
       - name: kyc_level
         tests:

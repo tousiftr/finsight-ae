@@ -1,7 +1,7 @@
 version: 2
 
 seeds:
-  - name: account_types
+  - name: seed_account_types
     description: Broad account type lookup. account_type stays broad and is validated from this seed.
     columns:
       - name: account_type
@@ -14,7 +14,7 @@ seeds:
       - name: is_active
         tests: [not_null]
 
-  - name: account_sub_types
+  - name: seed_account_sub_types
     description: Canonical account subtype lookup. Each account_sub_type maps to exactly one valid parent account_type.
     columns:
       - name: account_sub_type
@@ -26,7 +26,7 @@ seeds:
           - not_null
           - relationships:
               arguments:
-                to: ref('account_types')
+                to: ref('seed_account_types')
                 field: account_type
       - name: account_sub_type_label
         tests: [not_null]
@@ -35,7 +35,7 @@ seeds:
       - name: is_active
         tests: [not_null]
 
-  - name: plan_tiers
+  - name: seed_plan_tiers
     description: Plan tier lookup. Plan tier is separate from account type and account subtype.
     columns:
       - name: plan_tier
@@ -49,7 +49,7 @@ seeds:
       - name: is_active
         tests: [not_null]
 
-  - name: transaction_types
+  - name: seed_transaction_types
     description: Transaction type lookup used to validate staged transactions.
     columns:
       - name: transaction_type
@@ -61,7 +61,7 @@ seeds:
       - name: is_active
         tests: [not_null]
 
-  - name: transaction_statuses
+  - name: seed_transaction_statuses
     description: Transaction status lookup used to validate staged transactions.
     columns:
       - name: transaction_status
@@ -75,7 +75,7 @@ seeds:
       - name: is_active
         tests: [not_null]
 
-  - name: signup_channels
+  - name: seed_signup_channels
     description: Signup channel lookup used to validate staged customers.
     columns:
       - name: signup_channel
@@ -89,7 +89,7 @@ seeds:
       - name: is_active
         tests: [not_null]
 
-  - name: kyc_statuses
+  - name: seed_kyc_statuses
     description: KYC status lookup used to validate staged customer and KYC records.
     columns:
       - name: kyc_status

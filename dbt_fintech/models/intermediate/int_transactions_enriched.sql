@@ -38,7 +38,7 @@ left join {{ ref('int_account_enriched') }} a
     on t.account_id = a.account_id
 left join {{ ref('int_customers') }} c
     on t.customer_id = c.customer_id
-left join {{ ref('transaction_types') }} tt
+left join {{ ref('stg_seed_transaction_types') }} tt
     on t.transaction_type = tt.transaction_type
-left join {{ ref('transaction_statuses') }} ts
+left join {{ ref('stg_seed_transaction_statuses') }} ts
     on t.transaction_status = ts.transaction_status
