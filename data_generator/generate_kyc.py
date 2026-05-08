@@ -16,7 +16,15 @@ def random_time_between(start: datetime, end: datetime) -> datetime:
     return start + timedelta(seconds=random.randint(0, total_seconds))
 
 
-def _kyc_row(customer: dict, status: str, submitted_at: datetime, batch_id: str, app_id: int, dt: str) -> dict:
+def _kyc_row(
+    customer: dict,
+    status: str,
+    submitted_at: datetime,
+    batch_id: str,
+    generator_run_id: str,
+    app_id: int,
+    dt: str,
+) -> dict:
     reviewed_at = None
     rejection_reason = None
 
@@ -30,7 +38,7 @@ def _kyc_row(customer: dict, status: str, submitted_at: datetime, batch_id: str,
 
     risk_score = round(random.triangular(0, 100, 28 if status == "approved" else 62), 2)
     return {
-        "kyc_application_id": f"kyc_{batch_id}_{app_id:06d}",
+        "kyc_application_id": f"kyc_{batch_id}_{generator_run_id}_{app_id:06d}",
         "customer_id": customer["customer_id"],
         "submitted_at": submitted_at.astimezone(timezone.utc).isoformat(),
         "reviewed_at": reviewed_at.astimezone(timezone.utc).isoformat() if reviewed_at else None,
@@ -51,6 +59,7 @@ def generate_kyc_applications(
     customers: list[dict],
     dt: str,
     batch_id: str,
+    generator_run_id: str,
     batch_start: datetime | None = None,
     batch_end: datetime | None = None,
     existing_customers: list[dict] | None = None,
@@ -68,7 +77,7 @@ def generate_kyc_applications(
             continue
         status = random.choices(KYC_STATUSES, weights=[13, 64, 6, 14, 3], k=1)[0]
         submitted_at = random_time_between(batch_start, batch_end)
-        rows.append(_kyc_row(customer, status, submitted_at, batch_id, next_app_id, dt))
+        rows.append(_kyc_row(customer, status, submitted_at, batch_id, generator_run_id, next_app_id, dt))
         next_app_id += 1
 
     follow_up_candidates = existing_customers or []
@@ -77,7 +86,7 @@ def generate_kyc_applications(
             continue
         status = random.choices(["approved", "rejected", "manual_review", "pending", "expired"], weights=[38, 12, 28, 15, 7], k=1)[0]
         submitted_at = random_time_between(batch_start, batch_end)
-        rows.append(_kyc_row(customer, status, submitted_at, batch_id, next_app_id, dt))
+        rows.append(_kyc_row(customer, status, submitted_at, batch_id, generator_run_id, next_app_id, dt))
         next_app_id += 1
 
     return rows

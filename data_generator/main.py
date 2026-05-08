@@ -1,6 +1,8 @@
 import argparse
 import json
+import os
 import random
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -29,6 +31,31 @@ def current_quarter_hour_batch_window(now: datetime | None = None) -> tuple[date
     dt = batch_start.strftime("%Y-%m-%d")
     batch_id = batch_start.strftime("%Y%m%d_%H%M")
     return batch_start, batch_end, dt, batch_id
+
+
+def _safe_id_part(value: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_]+", "_", value).strip("_")
+
+
+def generator_run_id() -> str:
+    run_id = os.getenv("GITHUB_RUN_ID")
+    run_attempt = os.getenv("GITHUB_RUN_ATTEMPT", "1")
+    if run_id:
+        return f"gh{_safe_id_part(run_id)}_{_safe_id_part(run_attempt)}"
+    return datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+
+
+def assert_unique(rows: list[dict], key: str, label: str) -> None:
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for row in rows:
+        value = row.get(key)
+        if value in seen:
+            duplicates.add(value)
+        else:
+            seen.add(value)
+    if duplicates:
+        raise ValueError(f"Duplicate {label} IDs generated: {sorted(duplicates)[:10]}")
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -94,6 +121,7 @@ def main() -> None:
     event_count = random_or_fixed(args.event_min, args.event_max, None, "event")
 
     batch_start, batch_end, dt, batch_id = current_quarter_hour_batch_window()
+    run_id = generator_run_id()
     state = load_generator_state()
     print(state.state_message)
 
@@ -124,6 +152,7 @@ def main() -> None:
         reusable_accounts,
         dt,
         batch_id,
+        generator_run_id=run_id,
         event_count=event_count,
         batch_start=batch_start,
         batch_end=batch_end,
@@ -132,10 +161,14 @@ def main() -> None:
         customers,
         dt,
         batch_id,
+        generator_run_id=run_id,
         batch_start=batch_start,
         batch_end=batch_end,
         existing_customers=state.existing_customers,
     )
+
+    assert_unique(product_events, "event_id", "product event")
+    assert_unique(kyc_applications, "kyc_application_id", "KYC application")
 
     base = Path(args.output_dir)
     write_jsonl(base / "customers" / f"dt={dt}" / f"batch_id={batch_id}" / "customers.jsonl", customers)
@@ -146,6 +179,7 @@ def main() -> None:
     write_jsonl(base / "kyc_applications" / f"dt={dt}" / f"batch_id={batch_id}" / "kyc_applications.jsonl", kyc_applications)
 
     print(f"batch_id={batch_id}")
+    print(f"generator_run_id={run_id}")
     print(f"batch_start={batch_start.isoformat()}")
     print(f"batch_end={batch_end.isoformat()}")
     print(f"new_customers={len(customers)}")
