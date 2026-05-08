@@ -55,7 +55,7 @@ def current_hourly_batch_window(now: datetime | None = None) -> tuple[datetime, 
 
 def batch_window_from_batch_id(batch_id: str) -> tuple[datetime, datetime]:
     batch_start = datetime.strptime(batch_id, "%Y%m%d_%H%M").replace(tzinfo=timezone.utc)
-    batch_end = batch_start + timedelta(hours=1) - timedelta(seconds=1)
+    batch_end = batch_start + timedelta(minutes=20) - timedelta(seconds=1)
     return batch_start, batch_end
 
 
@@ -77,13 +77,14 @@ def generate_merchants(
     batch_id: str | None = None,
     batch_start: datetime | None = None,
     batch_end: datetime | None = None,
+    start_number: int = 1,
 ) -> list[dict]:
     if batch_start is None or batch_end is None:
         batch_start, batch_end, _, default_batch_id = current_hourly_batch_window()
         batch_id = batch_id or default_batch_id
 
     rows = []
-    for index in range(1, merchant_count + 1):
+    for index in range(start_number, start_number + merchant_count):
         category = random.choice(MERCHANT_CATEGORIES)
         country = random.choices(["BD", "US", "GB", "SG", "AE"], weights=[45, 25, 12, 10, 8], k=1)[0]
         risk_tier = random.choices(RISK_TIERS, weights=RISK_WEIGHTS, k=1)[0]

@@ -1,7 +1,14 @@
 import argparse
 import json
+import random
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.append(str(SCRIPTS_DIR))
 
 from generate_accounts import generate_accounts
 from generate_customers import generate_customers
@@ -9,15 +16,16 @@ from generate_kyc import generate_kyc_applications
 from generate_merchants import generate_merchants
 from generate_product_events import generate_product_events
 from generate_transactions import generate_transactions
+from generator_state import GeneratorState, load_generator_state
 
 
 def current_quarter_hour_batch_window(now: datetime | None = None) -> tuple[datetime, datetime, str, str]:
-    """Return the prior UTC 15-minute batch window and partition values."""
+    """Return the prior UTC 20-minute batch window and partition values."""
     now_utc = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    current_quarter_minute = (now_utc.minute // 15) * 15
-    current_quarter = now_utc.replace(minute=current_quarter_minute, second=0, microsecond=0)
-    batch_start = current_quarter - timedelta(minutes=15)
-    batch_end = current_quarter - timedelta(seconds=1)
+    current_slot_minute = (now_utc.minute // 20) * 20
+    current_slot = now_utc.replace(minute=current_slot_minute, second=0, microsecond=0)
+    batch_start = current_slot - timedelta(minutes=20)
+    batch_end = current_slot - timedelta(seconds=1)
     dt = batch_start.strftime("%Y-%m-%d")
     batch_id = batch_start.strftime("%Y%m%d_%H%M")
     return batch_start, batch_end, dt, batch_id
@@ -30,21 +38,104 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
             file.write(json.dumps(row) + "\n")
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate FinSight raw customer/account/transaction data.")
-    parser.add_argument("--customer-count", type=int, default=100)
-    parser.add_argument("--merchant-count", type=int, default=250)
+def random_or_fixed(min_value: int, max_value: int, fixed_value: int | None, label: str) -> int:
+    if fixed_value is not None:
+        if fixed_value < 0:
+            raise ValueError(f"--{label}-count must be non-negative")
+        return fixed_value
+    if min_value < 0 or max_value < 0:
+        raise ValueError(f"--{label}-min and --{label}-max must be non-negative")
+    if min_value > max_value:
+        raise ValueError(f"--{label}-min must be less than or equal to --{label}-max")
+    return random.randint(min_value, max_value)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate realistic FinSight live fintech raw data.")
+    parser.add_argument("--customer-count", type=int, default=None, help="Backward-compatible fixed customer count.")
+    parser.add_argument("--merchant-count", type=int, default=None, help="Backward-compatible fixed merchant count.")
+    parser.add_argument("--customer-min", type=int, default=1)
+    parser.add_argument("--customer-max", type=int, default=20)
+    parser.add_argument("--merchant-min", type=int, default=0)
+    parser.add_argument("--merchant-max", type=int, default=5)
+    parser.add_argument("--transaction-min", type=int, default=20)
+    parser.add_argument("--transaction-max", type=int, default=100)
+    parser.add_argument("--event-min", type=int, default=100)
+    parser.add_argument("--event-max", type=int, default=1000)
     parser.add_argument("--output-dir", default="data/raw")
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+def choose_reusable_accounts(state: GeneratorState, new_accounts: list[dict]) -> list[dict]:
+    """Mix existing and new accounts, preferring existing state when available."""
+    reusable_accounts = list(new_accounts)
+    if state.existing_accounts:
+        existing_sample_size = min(len(state.existing_accounts), max(25, len(new_accounts) * 8))
+        reusable_accounts.extend(random.sample(state.existing_accounts, k=existing_sample_size))
+    return reusable_accounts
+
+
+def choose_reusable_customers(state: GeneratorState, new_customers: list[dict]) -> list[dict]:
+    reusable_customers = [{**customer, "is_new_customer": True} for customer in new_customers]
+    if state.existing_customers:
+        existing_sample_size = min(len(state.existing_customers), max(50, len(new_customers) * 10))
+        reusable_customers.extend(
+            {**customer, "is_new_customer": False}
+            for customer in random.sample(state.existing_customers, k=existing_sample_size)
+        )
+    return reusable_customers
+
+
+def main() -> None:
+    args = parse_args()
+    customer_count = random_or_fixed(args.customer_min, args.customer_max, args.customer_count, "customer")
+    merchant_count = random_or_fixed(args.merchant_min, args.merchant_max, args.merchant_count, "merchant")
+    transaction_count = random_or_fixed(args.transaction_min, args.transaction_max, None, "transaction")
+    event_count = random_or_fixed(args.event_min, args.event_max, None, "event")
 
     batch_start, batch_end, dt, batch_id = current_quarter_hour_batch_window()
+    state = load_generator_state()
+    print(state.state_message)
 
-    customers = generate_customers(args.customer_count)
-    accounts = generate_accounts(customers)
-    merchants = generate_merchants(args.merchant_count, batch_id, batch_start, batch_end)
-    transactions = generate_transactions(accounts, merchants=merchants, batch_start=batch_start, batch_end=batch_end, batch_id=batch_id)
-    product_events = generate_product_events(customers, accounts, dt, batch_id)
-    kyc_applications = generate_kyc_applications(customers, dt, batch_id)
+    customers = generate_customers(customer_count, start_number=state.max_customer_number + 1)
+    accounts = generate_accounts(customers, start_number=state.max_account_number + 1)
+    merchants = generate_merchants(
+        merchant_count,
+        batch_id,
+        batch_start,
+        batch_end,
+        start_number=state.max_merchant_number + 1,
+    )
+
+    reusable_accounts = choose_reusable_accounts(state, accounts)
+    reusable_customers = choose_reusable_customers(state, customers)
+    reusable_merchants = [*merchants, *state.existing_merchants]
+
+    transactions = generate_transactions(
+        reusable_accounts,
+        merchants=reusable_merchants,
+        batch_start=batch_start,
+        batch_end=batch_end,
+        batch_id=batch_id,
+        transaction_count=transaction_count,
+    )
+    product_events = generate_product_events(
+        reusable_customers,
+        reusable_accounts,
+        dt,
+        batch_id,
+        event_count=event_count,
+        batch_start=batch_start,
+        batch_end=batch_end,
+    )
+    kyc_applications = generate_kyc_applications(
+        customers,
+        dt,
+        batch_id,
+        batch_start=batch_start,
+        batch_end=batch_end,
+        existing_customers=state.existing_customers,
+    )
 
     base = Path(args.output_dir)
     write_jsonl(base / "customers" / f"dt={dt}" / f"batch_id={batch_id}" / "customers.jsonl", customers)
@@ -54,11 +145,21 @@ def main() -> None:
     write_jsonl(base / "product_events" / f"dt={dt}" / f"batch_id={batch_id}" / "product_events.jsonl", product_events)
     write_jsonl(base / "kyc_applications" / f"dt={dt}" / f"batch_id={batch_id}" / "kyc_applications.jsonl", kyc_applications)
 
-    print(f"Generated batch_id={batch_id}")
+    print(f"batch_id={batch_id}")
+    print(f"batch_start={batch_start.isoformat()}")
+    print(f"batch_end={batch_end.isoformat()}")
+    print(f"new_customers={len(customers)}")
+    print(f"accounts={len(accounts)}")
+    print(f"new_merchants={len(merchants)}")
+    print(f"transactions={len(transactions)}")
+    print(f"product_events={len(product_events)}")
+    print(f"kyc_applications={len(kyc_applications)}")
+    print(f"neon_state_used={state.neon_state_used}")
     print(
-        f"Customers={len(customers)} Accounts={len(accounts)} Merchants={len(merchants)} "
-        f"Transactions={len(transactions)} ProductEvents={len(product_events)} "
-        f"KycApplications={len(kyc_applications)}"
+        "max_ids_detected="
+        f"customer=C{state.max_customer_number:05d},"
+        f"account=A{state.max_account_number:06d},"
+        f"merchant=M{state.max_merchant_number:06d}"
     )
 
 

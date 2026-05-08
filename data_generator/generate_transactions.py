@@ -1,18 +1,39 @@
 import random
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 TRANSACTION_TYPES = ["card_payment", "bank_transfer", "withdrawal", "deposit"]
+TRANSACTION_TYPE_WEIGHTS = [52, 18, 10, 20]
 TRANSACTION_STATUSES = ["completed", "pending", "failed", "declined"]
-MERCHANT_CATEGORIES = ["groceries", "travel", "utilities", "food", "ecommerce", "subscriptions"]
+TRANSACTION_STATUS_WEIGHTS = [84, 8, 5, 3]
+MERCHANT_CATEGORIES = ["groceries", "travel", "utilities", "food", "ecommerce", "subscriptions", "transport", "healthcare", "entertainment"]
+PAYMENT_METHODS = ["debit_card", "bank_account", "wallet", "virtual_card", "ach"]
+FAILURE_REASONS = ["insufficient_funds", "card_expired", "suspected_fraud", "merchant_unavailable", "network_timeout", "kyc_required"]
+CATEGORY_AMOUNT_RANGES = {
+    "groceries": (8, 220),
+    "food": (5, 160),
+    "transport": (3, 90),
+    "utilities": (25, 450),
+    "ecommerce": (10, 1200),
+    "subscriptions": (3, 80),
+    "travel": (40, 3500),
+    "healthcare": (15, 900),
+    "entertainment": (8, 350),
+}
+TYPE_AMOUNT_RANGES = {
+    "bank_transfer": (25, 5000),
+    "withdrawal": (20, 1500),
+    "deposit": (25, 7000),
+}
 
 
 def current_hourly_batch_window(now: datetime | None = None) -> tuple[datetime, datetime, str, str]:
     now_utc = now or datetime.now(timezone.utc)
-    current_hour = now_utc.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
-    batch_start = current_hour - timedelta(hours=1)
-    batch_end = current_hour - timedelta(seconds=1)
-    return batch_start, batch_end, batch_start.strftime("%Y-%m-%d"), batch_start.strftime("%Y%m%d_%H00")
+    current_slot_minute = (now_utc.astimezone(timezone.utc).minute // 20) * 20
+    current_slot = now_utc.astimezone(timezone.utc).replace(minute=current_slot_minute, second=0, microsecond=0)
+    batch_start = current_slot - timedelta(minutes=20)
+    batch_end = current_slot - timedelta(seconds=1)
+    return batch_start, batch_end, batch_start.strftime("%Y-%m-%d"), batch_start.strftime("%Y%m%d_%H%M")
 
 
 def random_time_between(start: datetime, end: datetime) -> datetime:
@@ -28,6 +49,11 @@ def make_transaction_id(index: int, batch_id: str | None = None) -> str:
     return f"txn_{index:06d}"
 
 
+def _amount_for(transaction_type: str, merchant_category: str | None) -> float:
+    low, high = TYPE_AMOUNT_RANGES.get(transaction_type, CATEGORY_AMOUNT_RANGES.get(merchant_category or "ecommerce", (5, 1000)))
+    return round(random.triangular(low, high, low + ((high - low) * 0.25)), 2)
+
+
 def generate_transactions(
     accounts: list[dict],
     min_per_account: int = 1,
@@ -36,35 +62,48 @@ def generate_transactions(
     batch_start: datetime | None = None,
     batch_end: datetime | None = None,
     batch_id: str | None = None,
+    transaction_count: int | None = None,
 ) -> list[dict]:
     if batch_start is None or batch_end is None:
         batch_start, batch_end, _, default_batch_id = current_hourly_batch_window()
         batch_id = batch_id or default_batch_id
 
+    if not accounts:
+        return []
+
+    if transaction_count is None:
+        transaction_count = sum(random.randint(min_per_account, max_per_account) for _ in accounts)
+
     transactions: list[dict] = []
-    txn_seq = 1
+    for txn_seq in range(1, transaction_count + 1):
+        account = random.choice(accounts)
+        merchant = random.choice(merchants) if merchants and random.random() < 0.72 else None
+        transaction_type = random.choices(TRANSACTION_TYPES, weights=TRANSACTION_TYPE_WEIGHTS, k=1)[0]
+        merchant_category = merchant["merchant_category"] if merchant else random.choice(MERCHANT_CATEGORIES)
+        status = random.choices(TRANSACTION_STATUSES, weights=TRANSACTION_STATUS_WEIGHTS, k=1)[0]
+        amount = _amount_for(transaction_type, merchant_category)
+        fee_amount = None
+        if status == "completed" and transaction_type in {"bank_transfer", "withdrawal"} and random.random() < 0.35:
+            fee_amount = round(max(0.25, min(25, amount * random.uniform(0.002, 0.012))), 2)
+        failure_reason = random.choice(FAILURE_REASONS) if status in {"failed", "declined"} else None
 
-    for account in accounts:
-        tx_count = random.randint(min_per_account, max_per_account)
-
-        for _ in range(tx_count):
-            merchant = random.choice(merchants) if merchants else None
-            transaction_time = random_time_between(batch_start, batch_end)
-            transactions.append(
-                {
-                    "transaction_id": make_transaction_id(txn_seq, batch_id),
-                    "account_id": account["account_id"],
-                    "customer_id": account["customer_id"],
-                    "transaction_type": random.choice(TRANSACTION_TYPES),
-                    "amount": round(random.uniform(1, 2500), 2),
-                    "currency": account.get("currency", "USD"),
-                    "status": random.choice(TRANSACTION_STATUSES),
-                    "merchant_id": merchant["merchant_id"] if merchant else None,
-                    "merchant_category": merchant["merchant_category"] if merchant else random.choice(MERCHANT_CATEGORIES),
-                    "transaction_timestamp": transaction_time.isoformat(),
-                    "batch_id": batch_id,
-                }
-            )
-            txn_seq += 1
+        transactions.append(
+            {
+                "transaction_id": make_transaction_id(txn_seq, batch_id),
+                "account_id": account["account_id"],
+                "customer_id": account["customer_id"],
+                "transaction_type": transaction_type,
+                "amount": amount,
+                "currency": account.get("currency", "USD"),
+                "status": status,
+                "merchant_id": merchant["merchant_id"] if merchant else None,
+                "merchant_category": merchant_category,
+                "payment_method": random.choice(PAYMENT_METHODS),
+                "fee_amount": fee_amount,
+                "failure_reason": failure_reason,
+                "transaction_timestamp": random_time_between(batch_start, batch_end).isoformat(),
+                "batch_id": batch_id,
+            }
+        )
 
     return transactions
