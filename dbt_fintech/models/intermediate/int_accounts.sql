@@ -4,7 +4,6 @@ select
     account_type,
     account_sub_type,
     plan_tier,
-    investment_sub_type,
     currency,
     account_status,
     opened_at,

@@ -4,6 +4,8 @@ select
     ca.customer_status,
     ca.country,
     ca.account_type,
+    ca.account_sub_type,
+    ca.plan_tier,
     ca.account_status,
     ca.opened_at,
     te.transaction_id,
