@@ -16,6 +16,7 @@ __pycache__/
 *.pyc
 
 # Generated/local data
+data/raw/
 data/
 
 # dbt artifacts
