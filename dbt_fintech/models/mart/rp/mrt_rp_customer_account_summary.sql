@@ -1,3 +1,4 @@
+-- depends_on: {{ ref('int_customer_accounts') }}
 select
     ca.customer_id,
     ca.account_id,

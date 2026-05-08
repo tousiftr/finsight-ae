@@ -1,3 +1,4 @@
+-- depends_on: {{ ref('stg_accounts') }}
 select
     account_id,
     plan_tier

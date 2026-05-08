@@ -1,3 +1,4 @@
+-- depends_on: {{ ref('stg_accounts') }}
 with latest_raw_accounts as (
     select
         payload ->> 'account_id' as account_id,
