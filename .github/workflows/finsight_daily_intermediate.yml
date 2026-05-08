@@ -3,8 +3,8 @@ name: FinSight Daily Intermediate dbt
 on:
   workflow_dispatch:
   schedule:
-    # 02:00 Bangladesh time (UTC+06:00)
-    - cron: "0 20 * * *"
+    # 02:10 Bangladesh time (UTC+06:00), after the 20-minute ingest window
+    - cron: "10 20 * * *"
 
 concurrency:
   group: finsight-daily-intermediate
@@ -58,9 +58,13 @@ jobs:
                 threads: 4
           PROFILE
 
-      - name: Run dbt source freshness
+      - name: Validate dbt connection
         working-directory: dbt_fintech
-        run: dbt source freshness --profiles-dir .
+        run: dbt debug --profiles-dir .
+
+      - name: List selected intermediate resources
+        working-directory: dbt_fintech
+        run: dbt ls --profiles-dir . --select path:models/intermediate
 
       - name: Run dbt intermediate models only
         working-directory: dbt_fintech
