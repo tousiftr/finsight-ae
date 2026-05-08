@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
   schedule:
-    - cron: "0 8,20 * * *"
+    - cron: "*/15 * * * *"
 
 jobs:
   dbt-transform:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt_fintech
       DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
       DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
       DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
@@ -80,7 +80,7 @@ jobs:
 
       - name: Check source freshness
         working-directory: dbt_fintech
-        run: dbt source freshness --target dev
+        run: dbt source freshness --profiles-dir .
 
       - name: List all dbt models
         working-directory: dbt_fintech
@@ -88,7 +88,7 @@ jobs:
 
       - name: Build all dbt models
         working-directory: dbt_fintech
-        run: dbt build --target dev
+        run: dbt build --profiles-dir .
 
       - name: Generate dbt docs
         working-directory: dbt_fintech

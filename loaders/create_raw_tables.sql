@@ -88,7 +88,7 @@ create table if not exists raw.raw_transactions (
 
 create table if not exists raw.raw_product_events (
     id bigserial primary key,
-    raw_product_event_id text primary key,
+    raw_product_event_id text not null,
     payload jsonb not null,
     source_system text not null default 'cloudflare_r2',
     source_bucket text not null,
@@ -102,7 +102,7 @@ create table if not exists raw.raw_product_events (
 
 create table if not exists raw.raw_kyc_applications (
     id bigserial primary key,
-    raw_kyc_application_id text primary key,
+    raw_kyc_application_id text not null,
     payload jsonb not null,
     source_system text not null default 'cloudflare_r2',
     source_bucket text not null,
@@ -113,6 +113,25 @@ create table if not exists raw.raw_kyc_applications (
     raw_record_hash text not null,
     loaded_at timestamptz not null default now()
 );
+
+
+create unique index if not exists ux_raw_customers_source_object_key_raw_record_hash
+    on raw.raw_customers (source_object_key, raw_record_hash);
+create unique index if not exists ux_raw_accounts_source_object_key_raw_record_hash
+    on raw.raw_accounts (source_object_key, raw_record_hash);
+create unique index if not exists ux_raw_merchants_source_object_key_raw_record_hash
+    on raw.raw_merchants (source_object_key, raw_record_hash);
+create unique index if not exists ux_raw_transactions_source_object_key_raw_record_hash
+    on raw.raw_transactions (source_object_key, raw_record_hash);
+create unique index if not exists ux_raw_product_events_source_object_key_raw_record_hash
+    on raw.raw_product_events (source_object_key, raw_record_hash);
+create unique index if not exists ux_raw_kyc_applications_source_object_key_raw_record_hash
+    on raw.raw_kyc_applications (source_object_key, raw_record_hash);
+
+create unique index if not exists ux_raw_product_events_raw_product_event_id
+    on raw.raw_product_events (raw_product_event_id);
+create unique index if not exists ux_raw_kyc_applications_raw_kyc_application_id
+    on raw.raw_kyc_applications (raw_kyc_application_id);
 
 create index if not exists idx_raw_product_events_batch_id on raw.raw_product_events (batch_id);
 create index if not exists idx_raw_product_events_dt on raw.raw_product_events (dt);

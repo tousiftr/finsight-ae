@@ -21,14 +21,6 @@ TABLE_CONFIG = [
     ("kyc_applications", "raw", "raw_kyc_applications", "kyc_applications.jsonl", "kyc_application_id"),
 ]
 
-DELETE_ORDER = [
-    ("raw", "raw_product_events"),
-    ("raw", "raw_kyc_applications"),
-    ("raw", "raw_transactions"),
-    ("raw", "raw_merchants"),
-    ("raw", "raw_accounts"),
-    ("raw", "raw_customers"),
-]
 
 LOAD_ORDER = [
     ("customers", "raw", "raw_customers", "customers.jsonl", "customer_id"),
@@ -378,17 +370,19 @@ def build_insert_rows(
     return column_names, rows
 
 
-def delete_existing_batch(conn, batch_id: str) -> None:
+
+def ensure_idempotency_indexes(conn) -> None:
     cur = conn.cursor()
 
     try:
-        for schema, table in DELETE_ORDER:
+        for _, schema, table, _, _ in TABLE_CONFIG:
+            index_name = f"ux_{table}_source_object_key_raw_record_hash"
             cur.execute(
                 f"""
-                delete from {quote_identifier(schema)}.{quote_identifier(table)}
-                where batch_id = %s;
-                """,
-                (batch_id,),
+                create unique index if not exists {quote_identifier(index_name)}
+                on {quote_identifier(schema)}.{quote_identifier(table)}
+                (source_object_key, raw_record_hash);
+                """
             )
     finally:
         cur.close()
@@ -404,6 +398,15 @@ def insert_rows(
 ) -> int:
     if not rows:
         return 0
+
+    required_idempotency_columns = {"source_object_key", "raw_record_hash"}
+    missing_idempotency_columns = required_idempotency_columns - set(column_names)
+
+    if missing_idempotency_columns:
+        raise RuntimeError(
+            f"{schema}.{table} is missing required idempotency columns: "
+            + ", ".join(sorted(missing_idempotency_columns))
+        )
 
     quoted_columns = ", ".join(
         quote_identifier(column_name)
@@ -436,44 +439,23 @@ def insert_rows(
 
             sql = (
                 f"insert into {quote_identifier(schema)}.{quote_identifier(table)} "
-                f"({quoted_columns}) values {values_sql};"
+                f"({quoted_columns}) values {values_sql} "
+                "on conflict (source_object_key, raw_record_hash) do nothing;"
             )
 
             cur.execute(sql, tuple(flat_params))
-
-            inserted += len(chunk)
-            print(f"{schema}.{table}: inserted {inserted} of {len(rows)} rows")
+            inserted += max(cur.rowcount or 0, 0)
+            checked = min(start_index + len(chunk), len(rows))
+            print(
+                f"{schema}.{table}: inserted {inserted} new rows "
+                f"after checking {checked} of {len(rows)} rows"
+            )
 
     finally:
         cur.close()
 
-    return len(rows)
-    if not rows:
-        return 0
+    return inserted
 
-    quoted_columns = ", ".join(
-        quote_identifier(column_name)
-        for column_name in column_names
-    )
-
-    placeholders = ", ".join(
-        "%s::jsonb" if column_name == "payload" else "%s"
-        for column_name in column_names
-    )
-
-    sql = (
-        f"insert into {quote_identifier(schema)}.{quote_identifier(table)} "
-        f"({quoted_columns}) values ({placeholders});"
-    )
-
-    cur = conn.cursor()
-
-    try:
-        cur.executemany(sql, rows)
-    finally:
-        cur.close()
-
-    return len(rows)
 
 def run_batch_validations(conn, batch_id: str) -> dict:
     checks = {
@@ -672,7 +654,7 @@ def main() -> None:
     conn = get_neon_connection()
 
     try:
-        delete_existing_batch(conn, args.batch_id)
+        ensure_idempotency_indexes(conn)
 
         loaded_counts = {}
 
