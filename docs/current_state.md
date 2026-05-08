@@ -4,6 +4,7 @@
 - Raw micro-ingestion is active via GitHub Actions.
 - Schedule cadence is every 10 minutes.
 - Ingestion produces raw micro-batch files for loading.
+- Merchant and transaction generators use hourly UTC batch partitions with randomized event timestamps inside the batch window.
 
 ## Object storage (R2)
 - Active bucket: `finsight-raw`.
@@ -13,6 +14,7 @@
 Raw data is loaded into the `raw` schema:
 - `raw.raw_customers`
 - `raw.raw_accounts`
+- `raw.raw_merchants`
 - `raw.raw_transactions`
 
 ## dbt workflow status

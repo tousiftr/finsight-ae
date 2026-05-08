@@ -12,3 +12,14 @@ models:
         tests: [not_null]
       - name: currency
         tests: [not_null]
+
+  - name: mrt_merchant_performance
+    description: Thin reporting mart with merchant-level transaction volume, success, fee, and recency metrics.
+    columns:
+      - name: merchant_id
+        description: Merchant identifier for the reporting grain.
+        tests: [not_null, unique]
+      - name: gross_transaction_volume
+        description: Sum of transaction amount by merchant.
+      - name: fee_revenue
+        description: Sum of transaction fee_amount by merchant.

@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from faker import Faker
+from generate_merchants import batch_window_from_batch_id, current_hourly_batch_window, generate_merchants
 fake = Faker()
 BDT = timezone(timedelta(hours=6))
 
@@ -13,7 +14,7 @@ def utc_now() -> datetime:
 
 
 def make_batch_id(now: datetime) -> str:
-    return now.strftime("%Y%m%d_%H%M")
+    return now.strftime("%Y%m%d_%H00")
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -133,12 +134,14 @@ def generate_accounts_with_history(customers: list[dict], batch_id: str, batch_e
     return rows
 
 
-def generate_transactions(accounts: list[dict], transaction_count: int, batch_id: str, generated_at: datetime) -> list[dict]:
+def generate_transactions(accounts: list[dict], merchants: list[dict], transaction_count: int, batch_id: str, batch_start: datetime, batch_end: datetime) -> list[dict]:
     rows = []
     for i in range(1, transaction_count + 1):
         if not accounts:
             break
         account = random.choice(accounts)
+        merchant = random.choice(merchants)
+        transaction_time = random_time_between(batch_start, batch_end)
         rows.append({
             "transaction_id": f"txn_{i:06d}",
             "account_id": account["account_id"],
@@ -146,21 +149,22 @@ def generate_transactions(accounts: list[dict], transaction_count: int, batch_id
             "transaction_type": random.choices(["card_payment", "bank_transfer", "withdrawal", "deposit"], weights=[50, 20, 15, 15], k=1)[0],
             "amount": round(random.uniform(3, 900), 2),
             "currency": account.get("currency") or "USD",
-                        "merchant_category": random.choice(["groceries", "food", "transport", "utilities", "ecommerce", "subscriptions", "travel", "cash_withdrawal"]),
-            "transaction_timestamp": generated_at.isoformat(),
+            "merchant_id": merchant["merchant_id"],
+            "merchant_category": merchant["merchant_category"],
+            "transaction_timestamp": transaction_time.isoformat(),
             "batch_id": batch_id,
         })
     return rows
 
 
-def generate_transactions_with_history(accounts: list[dict], transaction_count: int, batch_id: str, batch_end: datetime) -> list[dict]:
+def generate_transactions_with_history(accounts: list[dict], merchants: list[dict], transaction_count: int, batch_id: str, batch_start: datetime, batch_end: datetime) -> list[dict]:
     rows = []
     if not accounts:
         return rows
     for i in range(1, transaction_count + 1):
         account = random.choice(accounts)
-        opened_at = datetime.fromisoformat(account["opened_at"])
-        transaction_time = random_time_between(opened_at, batch_end)
+        merchant = random.choice(merchants)
+        transaction_time = random_time_between(batch_start, batch_end)
         rows.append({
             "transaction_id": f"txn_{i:06d}",
             "account_id": account["account_id"],
@@ -168,7 +172,8 @@ def generate_transactions_with_history(accounts: list[dict], transaction_count: 
             "transaction_type": random.choices(["card_payment", "bank_transfer", "withdrawal", "deposit"], weights=[50, 20, 15, 15], k=1)[0],
             "amount": round(random.uniform(3, 900), 2),
             "currency": account.get("currency") or "USD",
-                        "merchant_id": f"M{random.randint(1,9999):04d}",
+            "merchant_id": merchant["merchant_id"],
+            "merchant_category": merchant["merchant_category"],
             "transaction_timestamp": transaction_time.isoformat(),
             "status": random.choices(["completed", "pending", "failed", "declined"], weights=[88, 5, 4, 3], k=1)[0],
             "payment_method": random.choice(["virtual_card","physical_card","bank_rail","ach"]),
@@ -256,6 +261,7 @@ def main() -> None:
     parser.add_argument("--dt", type=str, default=None)
     parser.add_argument("--batch-id", type=str, default=None)
     parser.add_argument("--customer-count", type=int, default=100)
+    parser.add_argument("--merchant-count", type=int, default=250)
     parser.add_argument("--transaction-count", type=int, default=1200)
     parser.add_argument("--history-start-date", type=str, default=None)
     parser.add_argument("--product-event-count", type=int, default=None)
@@ -263,19 +269,23 @@ def main() -> None:
     args = parser.parse_args()
 
     now = utc_now()
-    batch_dt = args.dt or now.strftime("%Y-%m-%d")
-    batch_id = args.batch_id or make_batch_id(now)
+    if args.batch_id:
+        batch_id = args.batch_id
+        batch_start, batch_end = batch_window_from_batch_id(batch_id)
+    else:
+        batch_start, batch_end, _, batch_id = current_hourly_batch_window(now)
+    batch_dt = args.dt or batch_start.strftime("%Y-%m-%d")
     if args.seed is not None:
         random.seed(args.seed)
         Faker.seed(args.seed)
     history_start_date = args.history_start_date or batch_dt
     history_start = parse_iso_date(history_start_date)
-    batch_end = datetime.fromisoformat(f"{batch_dt}T23:59:59+00:00")
     product_event_count = args.product_event_count if args.product_event_count is not None else args.customer_count * 10
 
     customers = generate_customers_with_history(args.customer_count, batch_id, history_start, batch_end)
     accounts = generate_accounts_with_history(customers, batch_id, batch_end)
-    transactions = generate_transactions_with_history(accounts, args.transaction_count, batch_id, batch_end)
+    merchants = generate_merchants(args.merchant_count, batch_id, batch_start, batch_end)
+    transactions = generate_transactions_with_history(accounts, merchants, args.transaction_count, batch_id, batch_start, batch_end)
     product_events = generate_product_events_with_history(customers, accounts, batch_dt, batch_id, product_event_count, batch_end)
     kyc_applications = generate_kyc_with_history(customers, batch_dt, batch_id, batch_end)
     latest_kyc_by_customer = {}
@@ -287,6 +297,7 @@ def main() -> None:
     base = Path(__file__).resolve().parents[1] / "data" / "raw"
     write_jsonl(base / "customers" / f"dt={batch_dt}" / f"batch_id={batch_id}" / "customers.jsonl", customers)
     write_jsonl(base / "accounts" / f"dt={batch_dt}" / f"batch_id={batch_id}" / "accounts.jsonl", accounts)
+    write_jsonl(base / "merchants" / f"dt={batch_dt}" / f"batch_id={batch_id}" / "merchants.jsonl", merchants)
     write_jsonl(base / "transactions" / f"dt={batch_dt}" / f"batch_id={batch_id}" / "transactions.jsonl", transactions)
     write_jsonl(base / "product_events" / f"dt={batch_dt}" / f"batch_id={batch_id}" / "product_events.jsonl", product_events)
     write_jsonl(base / "kyc_applications" / f"dt={batch_dt}" / f"batch_id={batch_id}" / "kyc_applications.jsonl", kyc_applications)
@@ -295,6 +306,7 @@ def main() -> None:
     print(f"BATCH_ID={batch_id}")
     print(f"Generated customers rows: {len(customers)}")
     print(f"Generated accounts rows: {len(accounts)}")
+    print(f"Generated merchants rows: {len(merchants)}")
     print(f"Generated transactions rows: {len(transactions)}")
     print(f"Generated product_events rows: {len(product_events)}")
     print(f"Generated kyc_applications rows: {len(kyc_applications)}")

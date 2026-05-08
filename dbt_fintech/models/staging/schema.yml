@@ -56,6 +56,29 @@ models:
                 to: ref('stg_seed_plan_tiers')
                 field: plan_tier
 
+  - name: stg_merchants
+    description: Staged merchants deduped by merchant_id using the latest loaded_at, dt, and batch_id ordering.
+    columns:
+      - name: merchant_id
+        description: Stable synthetic merchant identifier.
+        tests: [not_null, unique]
+      - name: merchant_name
+        description: Merchant display name.
+        tests: [not_null]
+      - name: merchant_category
+        description: Canonical merchant category used for transaction enrichment.
+        tests: [not_null]
+      - name: risk_tier
+        description: Merchant risk tier assigned at onboarding.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['low', 'medium', 'high']
+      - name: is_high_risk
+        description: Boolean flag derived from the high risk tier.
+        tests: [not_null]
+
   - name: stg_transactions
     description: Staged transactions deduped by transaction_id using the latest loaded_at, dt, and batch_id ordering.
     columns:
