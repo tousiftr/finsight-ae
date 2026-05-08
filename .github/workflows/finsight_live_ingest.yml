@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 20
 
     env:
-      RAW_OUTPUT_DIR: ${{ runner.temp }}/finsight_raw
+      RAW_OUTPUT_DIR: /tmp/finsight_raw
       DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DATABASE_URL }}
       NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || secrets.DATABASE_URL }}
       DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
