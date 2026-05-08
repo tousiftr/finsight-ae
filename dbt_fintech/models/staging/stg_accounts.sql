@@ -7,11 +7,26 @@ with ranked as (
         payload ->> 'customer_id' as customer_id,
         lower(nullif(payload ->> 'account_type', '')) as account_type,
         case
+            when lower(nullif(payload ->> 'account_sub_type', '')) is not null
+                then lower(nullif(payload ->> 'account_sub_type', ''))
             when lower(nullif(payload ->> 'account_type', '')) = 'investment'
-                then lower(coalesce(nullif(payload ->> 'account_sub_type', ''), nullif(payload ->> 'investment_sub_type', '')))
-            else lower(nullif(payload ->> 'account_sub_type', ''))
+                then lower(nullif(payload ->> 'investment_sub_type', ''))
+            when lower(nullif(payload ->> 'account_type', '')) = 'plus'
+                then 'standard_checking'
+            when lower(nullif(payload ->> 'account_type', '')) = 'savings'
+                then 'instant_access'
+            when lower(nullif(payload ->> 'account_type', '')) = 'super'
+                then 'retirement_super'
+            when lower(nullif(payload ->> 'account_type', '')) = 'salary'
+                then 'salary_account'
         end as account_sub_type,
-        lower(nullif(payload ->> 'plan_tier', '')) as plan_tier,
+        coalesce(
+            lower(nullif(payload ->> 'plan_tier', '')),
+            case
+                when lower(nullif(payload ->> 'account_type', '')) = 'plus' then 'plus'
+                else 'free'
+            end
+        ) as plan_tier,
         upper(nullif(payload ->> 'currency', '')) as currency,
         lower(nullif(payload ->> 'account_status', '')) as account_status,
         nullif(payload ->> 'opened_at', '')::timestamptz as opened_at,
