@@ -2,7 +2,7 @@
 
 ## Schema ownership
 - `raw` is ingestion-owned.
-- `dbt_rad` is dbt-owned.
+- `dbt_fs` is dbt-owned.
 - No extra schemas may be introduced.
 
 ## Account subtype contract

@@ -8,6 +8,6 @@ finsight_fintech:
       password: "{{ env_var('DBT_PG_PASSWORD', 'your_neon_password') }}"
       port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
       dbname: "{{ env_var('DBT_PG_DATABASE', 'your_database') }}"
-      schema: dbt_rad
+      schema: dbt_fs
       sslmode: require
       threads: 4

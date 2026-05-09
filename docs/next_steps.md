@@ -14,7 +14,7 @@
 
 4. Add more source domains later
    - Incrementally onboard additional raw domains.
-   - Keep schema and layering contracts unchanged (`raw`, `dbt_rad`).
+   - Keep schema and layering contracts unchanged (`raw`, `dbt_fs`).
 
 5. After dbt quality is stable, move to Superset
    - Begin BI/dashboard integration only after dbt test/documentation maturity is achieved.
