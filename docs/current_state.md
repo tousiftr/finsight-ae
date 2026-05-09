@@ -35,12 +35,12 @@ No additional schemas are allowed.
 Within `dbt_fs`:
 - `stg_*` = source-cleaned views
 - `int_*` = trusted base-truth tables
-- `mrt_*` = reporting/dashboard views
+- `mrt_rp_<dept>_<model>` = reporting/dashboard views under `models/mart/report/<department>/`
 
 ## Validated materializations
 - `stg_*` models materialize as `VIEW`
 - `int_*` models materialize as `BASE TABLE`
-- `mrt_*` models materialize as `VIEW`
+- `mrt_rp_*` models materialize as `VIEW`
 
 ## Completed validation checklist
 - [x] `dbt debug`

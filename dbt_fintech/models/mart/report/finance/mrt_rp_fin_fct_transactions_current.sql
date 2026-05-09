@@ -1,4 +1,4 @@
-{{ config(materialized='view', alias='fct_transactions_current') }}
+{{ config(materialized='view') }}
 
 select
     transaction_id,

@@ -1,4 +1,4 @@
-{{ config(materialized='view', alias='fct_daily_transaction_metrics') }}
+{{ config(materialized='view') }}
 
 select
     transaction_date,
