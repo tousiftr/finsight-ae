@@ -17,6 +17,7 @@ select
     t.amount,
     t.currency,
     t.fee_amount,
+    t.failure_reason,
     t.transaction_type,
     tt.transaction_type_label,
     tt.transaction_flow,
