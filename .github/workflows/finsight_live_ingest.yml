@@ -65,13 +65,13 @@ jobs:
         run: |
           python data_generator/main.py \
             --customer-min 1 \
-            --customer-max 20 \
+            --customer-max 8 \
             --merchant-min 0 \
-            --merchant-max 5 \
-            --transaction-min 20 \
-            --transaction-max 100 \
-            --event-min 100 \
-            --event-max 1000 \
+            --merchant-max 2 \
+            --transaction-min 30 \
+            --transaction-max 120 \
+            --event-min 150 \
+            --event-max 700 \
             --output-dir "$RAW_OUTPUT_DIR"
 
       - name: Load generated batch into Neon raw tables

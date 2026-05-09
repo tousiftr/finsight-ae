@@ -1,4 +1,10 @@
-{{ config(materialized='table') }}
+{{
+    config(
+        materialized='incremental',
+        unique_key='transaction_id',
+        on_schema_change='sync_all_columns'
+    )
+}}
 
 select
     t.transaction_id,
@@ -6,6 +12,8 @@ select
     t.customer_id,
     t.transaction_ts,
     t.transaction_ts::date as transaction_date,
+    t.status_updated_at,
+    t.updated_at,
     t.amount,
     t.currency,
     t.fee_amount,
@@ -13,6 +21,7 @@ select
     tt.transaction_type_label,
     tt.transaction_flow,
     t.transaction_status,
+    t.payment_method,
     ts.transaction_status_label,
     ts.is_success as is_successful_status,
     ts.is_terminal as is_terminal_status,
@@ -38,6 +47,7 @@ select
     c.country,
     t.batch_id,
     coalesce(a.source_file_path, c.source_file_path) as source_file_path,
+    t.loaded_at,
     t.ingested_at
 from {{ ref('int_transactions') }} t
 left join {{ ref('int_account_enriched') }} a
@@ -50,3 +60,10 @@ left join {{ ref('stg_seed_transaction_types') }} tt
     on t.transaction_type = tt.transaction_type
 left join {{ ref('stg_seed_transaction_statuses') }} ts
     on t.transaction_status = ts.transaction_status
+
+{% if is_incremental() %}
+where t.loaded_at >= (
+    select coalesce(max(loaded_at), '1900-01-01'::timestamp)
+    from {{ this }}
+)
+{% endif %}

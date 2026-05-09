@@ -101,9 +101,70 @@ def generate_transactions(
                 "payment_method": random.choice(PAYMENT_METHODS),
                 "fee_amount": fee_amount,
                 "failure_reason": failure_reason,
-                "transaction_timestamp": random_time_between(batch_start, batch_end).isoformat(),
+                "transaction_timestamp": (transaction_timestamp := random_time_between(batch_start, batch_end)).isoformat(),
+                "status_updated_at": transaction_timestamp.isoformat(),
+                "updated_at": transaction_timestamp.isoformat(),
                 "batch_id": batch_id,
             }
         )
 
     return transactions
+
+
+def _next_status(current_status: str | None) -> str:
+    current = (current_status or "pending").lower()
+    if current == "pending":
+        return random.choices(["completed", "failed", "declined"], weights=[76, 15, 9], k=1)[0]
+    return random.choices([current, "completed", "failed", "declined"], weights=[70, 16, 8, 6], k=1)[0]
+
+
+def generate_transaction_status_updates(
+    existing_transactions: list[dict],
+    batch_start: datetime,
+    batch_end: datetime,
+    batch_id: str,
+    max_updates: int = 10,
+) -> list[dict]:
+    """Create append-only status lifecycle records for existing transactions."""
+    if not existing_transactions or max_updates <= 0:
+        return []
+
+    pending = [txn for txn in existing_transactions if (txn.get("status") or "").lower() == "pending"]
+    terminal = [txn for txn in existing_transactions if (txn.get("status") or "").lower() in {"completed", "failed", "declined"}]
+    candidates = pending + random.sample(terminal, k=min(len(terminal), max_updates))
+    if not candidates:
+        return []
+
+    update_count = random.randint(0, min(max_updates, len(candidates)))
+    updates: list[dict] = []
+    for txn in random.sample(candidates, k=update_count):
+        updated = dict(txn)
+        status = _next_status(updated.get("status"))
+        amount = float(updated.get("amount") or _amount_for(updated.get("transaction_type") or "card_payment", updated.get("merchant_category")))
+        status_updated_at = random_time_between(batch_start, batch_end)
+
+        updated["status"] = status
+        updated["amount"] = round(amount, 2)
+        updated.setdefault("currency", "USD")
+        updated.setdefault("transaction_type", random.choices(TRANSACTION_TYPES, weights=TRANSACTION_TYPE_WEIGHTS, k=1)[0])
+        updated.setdefault("merchant_category", random.choice(MERCHANT_CATEGORIES))
+        updated.setdefault("payment_method", random.choice(PAYMENT_METHODS))
+        updated.setdefault("transaction_timestamp", status_updated_at.isoformat())
+        updated["status_updated_at"] = status_updated_at.isoformat()
+        updated["updated_at"] = status_updated_at.isoformat()
+        updated["batch_id"] = batch_id
+
+        if status == "completed":
+            updated["failure_reason"] = None
+            if updated.get("fee_amount") in (None, "") and updated.get("transaction_type") in {"bank_transfer", "withdrawal"}:
+                updated["fee_amount"] = round(max(0.25, min(25, amount * random.uniform(0.002, 0.012))), 2)
+        elif status in {"failed", "declined"}:
+            updated["failure_reason"] = updated.get("failure_reason") or random.choice(FAILURE_REASONS)
+            updated["fee_amount"] = None
+        else:
+            updated["failure_reason"] = None
+            updated["fee_amount"] = None
+
+        updates.append(updated)
+
+    return updates

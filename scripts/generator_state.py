@@ -24,6 +24,7 @@ class GeneratorState:
     existing_customers: list[dict[str, Any]] = field(default_factory=list)
     existing_accounts: list[dict[str, Any]] = field(default_factory=list)
     existing_merchants: list[dict[str, Any]] = field(default_factory=list)
+    existing_transactions: list[dict[str, Any]] = field(default_factory=list)
     state_message: str = "Running without Neon state; using fallback ID seeds."
 
 
@@ -214,6 +215,80 @@ def load_existing_merchants(conn, limit: int = 1000) -> list[dict[str, Any]]:
         cursor.close()
 
 
+def load_existing_transactions(conn, limit: int = 5000) -> list[dict[str, Any]]:
+    """Load recent distinct transactions for append-only lifecycle updates."""
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            with ranked as (
+                select
+                    payload ->> 'transaction_id' as transaction_id,
+                    payload ->> 'account_id' as account_id,
+                    payload ->> 'customer_id' as customer_id,
+                    payload ->> 'transaction_type' as transaction_type,
+                    payload ->> 'amount' as amount,
+                    payload ->> 'currency' as currency,
+                    payload ->> 'status' as status,
+                    payload ->> 'merchant_id' as merchant_id,
+                    payload ->> 'merchant_category' as merchant_category,
+                    payload ->> 'payment_method' as payment_method,
+                    payload ->> 'fee_amount' as fee_amount,
+                    payload ->> 'failure_reason' as failure_reason,
+                    payload ->> 'transaction_timestamp' as transaction_timestamp,
+                    payload,
+                    row_number() over (
+                        partition by payload ->> 'transaction_id'
+                        order by
+                            nullif(coalesce(payload ->> 'status_updated_at', payload ->> 'updated_at'), '')::timestamptz desc nulls last,
+                            loaded_at desc,
+                            dt desc,
+                            batch_id desc
+                    ) as rn
+                from raw.raw_transactions
+                where payload ->> 'transaction_id' is not null
+                  and payload ->> 'account_id' ~ '^A[0-9]{6}$'
+                  and payload ->> 'customer_id' ~ '^C[0-9]{5}$'
+            )
+            select
+                transaction_id, account_id, customer_id, transaction_type, amount, currency, status,
+                merchant_id, merchant_category, payment_method, fee_amount, failure_reason, transaction_timestamp, payload
+            from ranked
+            where rn = 1
+              and exists (
+                  select 1
+                  from raw.raw_accounts a
+                  where a.payload ->> 'account_id' = ranked.account_id
+                    and a.payload ->> 'customer_id' = ranked.customer_id
+              )
+            order by transaction_id desc
+            limit %s;
+            """,
+            (limit,),
+        )
+        return [
+            {
+                "transaction_id": row[0],
+                "account_id": row[1],
+                "customer_id": row[2],
+                "transaction_type": row[3],
+                "amount": row[4],
+                "currency": row[5],
+                "status": row[6],
+                "merchant_id": row[7],
+                "merchant_category": row[8],
+                "payment_method": row[9],
+                "fee_amount": row[10],
+                "failure_reason": row[11],
+                "transaction_timestamp": row[12],
+                **(row[13] if isinstance(row[13], dict) else {}),
+            }
+            for row in cursor.fetchall()
+        ]
+    finally:
+        cursor.close()
+
+
 def load_generator_state() -> GeneratorState:
     """Connect to Neon and return generator state, or safe fallback state offline."""
     try:
@@ -230,6 +305,7 @@ def load_generator_state() -> GeneratorState:
             existing_customers=load_existing_customers(conn),
             existing_accounts=load_existing_accounts(conn),
             existing_merchants=load_existing_merchants(conn),
+            existing_transactions=load_existing_transactions(conn),
             state_message="Loaded generator state from Neon raw tables.",
         )
         return state
