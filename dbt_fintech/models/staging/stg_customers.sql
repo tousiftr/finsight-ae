@@ -7,11 +7,13 @@ with ranked as (
         payload ->> 'first_name' as first_name,
         payload ->> 'last_name' as last_name,
         lower(nullif(payload ->> 'email', '')) as email,
-        nullif(payload ->> 'phone', '') as phone,
+        nullif(coalesce(payload ->> 'phone', payload ->> 'phone_number'), '') as phone,
+        nullif(coalesce(payload ->> 'phone_number', payload ->> 'phone'), '') as phone_number,
         nullif(payload ->> 'date_of_birth', '')::date as date_of_birth,
         payload ->> 'country' as country,
         payload ->> 'city' as city,
         nullif(payload ->> 'created_at', '')::timestamptz as created_at,
+        coalesce(nullif(payload ->> 'updated_at', '')::timestamptz, loaded_at) as updated_at,
         lower(nullif(payload ->> 'signup_channel', '')) as signup_channel,
         nullif(payload ->> 'customer_segment', '') as customer_segment,
         nullif(payload ->> 'employment_status', '') as employment_status,
@@ -25,7 +27,7 @@ with ranked as (
         loaded_at as ingested_at,
         row_number() over (
             partition by payload ->> 'customer_id'
-            order by loaded_at desc, dt desc, batch_id desc
+            order by nullif(payload ->> 'updated_at', '')::timestamptz desc nulls last, loaded_at desc, dt desc, batch_id desc
         ) as rn
     from {{ source('raw', 'raw_customers') }}
 )
@@ -36,10 +38,12 @@ select
     last_name,
     email,
     phone,
+    phone_number,
     date_of_birth,
     country,
     city,
     created_at,
+    updated_at,
     signup_channel,
     customer_segment,
     employment_status,

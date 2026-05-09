@@ -1,19 +1,19 @@
-name: FinSight Daily Intermediate dbt
+name: FinSight Daily Analytics
 
 on:
   workflow_dispatch:
   schedule:
-    # 02:10 Bangladesh time (UTC+06:00), after the 20-minute ingest window
-    - cron: "10 20 * * *"
+    # 02:30 Bangladesh time (UTC+06:00), after live ingest settles
+    - cron: "30 20 * * *"
 
 concurrency:
-  group: finsight-daily-intermediate
+  group: finsight-daily-analytics
   cancel-in-progress: false
 
 jobs:
-  daily-intermediate:
+  daily-analytics:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DATABASE_URL }}
@@ -62,10 +62,18 @@ jobs:
         working-directory: dbt_fintech
         run: dbt debug --profiles-dir .
 
-      - name: List selected intermediate resources
+      - name: Run dbt source freshness
         working-directory: dbt_fintech
-        run: dbt ls --profiles-dir . --select path:models/intermediate
+        run: dbt source freshness --profiles-dir .
 
       - name: Run dbt intermediate models only
         working-directory: dbt_fintech
         run: dbt build --profiles-dir . --select path:models/intermediate
+
+      - name: Run dbt snapshots
+        working-directory: dbt_fintech
+        run: dbt snapshot --profiles-dir .
+
+      - name: Run dbt marts only
+        working-directory: dbt_fintech
+        run: dbt build --profiles-dir . --select path:models/marts

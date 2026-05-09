@@ -20,7 +20,7 @@ def make_account_id(index: int) -> str:
 
 
 def _account_count_for_customer() -> int:
-    return random.choices([1, 2, 3, 4], weights=[78, 15, 5, 2], k=1)[0]
+    return random.choices([1, 2], weights=[86, 14], k=1)[0]
 
 
 def generate_accounts(customers: list[dict], start_number: int = 900001) -> list[dict]:

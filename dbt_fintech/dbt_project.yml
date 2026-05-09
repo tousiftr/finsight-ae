@@ -22,6 +22,19 @@ models:
     intermediate:
       +materialized: table
 
+    marts:
+      +materialized: view
+      core:
+        +schema: mart_core
+      finance:
+        +schema: mart_finance
+      product:
+        +schema: mart_product
+      risk:
+        +schema: mart_risk
+      growth:
+        +schema: mart_growth
+
     mart:
       +materialized: view
 
