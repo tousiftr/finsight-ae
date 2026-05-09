@@ -10,7 +10,7 @@ GitHub Actions
   -> dbt models in schema dbt_fs:
        - stg_* (views)
        - int_* (tables)
-       - mrt_* (views)
+       - mrt_rp_<dept>_<model> (views under models/mart/report/)
 ```
 
 ## Component responsibilities
@@ -28,6 +28,6 @@ GitHub Actions
 ## Future architecture (not implemented yet)
 The following are planned later and are **not** currently implemented:
 - Superset for dashboarding/BI consumption
-- Cube for semantic serving
+- Cube for semantic serving, using the single `models/mart/` root as the handoff point
 - Airflow and/or Dagster for advanced orchestration
 - AI-assisted analytics capabilities

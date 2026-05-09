@@ -1,4 +1,4 @@
-{{ config(materialized='view', alias='fct_customer_risk_summary') }}
+{{ config(materialized='view') }}
 
 with history as (
     select

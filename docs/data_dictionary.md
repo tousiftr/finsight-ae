@@ -121,9 +121,9 @@
 - **Key columns:** `transaction_date`, `currency`, KPI columns.
 - **Important tests:** `transaction_date` not null; `currency` not null.
 
-## MRT layer (`dbt_fs.mrt_*`)
+## MART/report layer (`dbt_fs.mrt_rp_*`)
 
-### mrt_rp__finance_daily_transactions
+### mrt_rp_fin_daily_transactions
 - **Purpose:** Reporting-ready transaction detail view for finance use cases.
 - **Grain:** One row per transaction.
 - **Source models:** `int_transactions_enriched`.
@@ -131,7 +131,7 @@
 - **Key columns:** `transaction_id`, dimensional and status fields.
 - **Important tests:** `transaction_id` not null.
 
-### mrt_rp__daily_kpis
+### mrt_rp_fin_daily_kpis
 - **Purpose:** Reporting view of daily KPI metrics.
 - **Grain:** One row per (`transaction_date`, `currency`).
 - **Source models:** `int_daily_finance_metrics`.
@@ -139,7 +139,7 @@
 - **Key columns:** `transaction_date`, `currency`, KPI fields.
 - **Important tests:** `transaction_date` not null; `currency` not null.
 
-### mrt_rp__customer_account_summary
+### mrt_rp_core_customer_account_summary
 - **Purpose:** Reporting view combining customer-account entities with transaction activity.
 - **Grain:** One row per customer-account-transaction combination (left join preserves customer-account rows).
 - **Source models:** `int_customer_accounts`, `int_transactions_enriched`.

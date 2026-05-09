@@ -1,4 +1,4 @@
-{{ config(materialized='view', alias='dim_customer_current') }}
+{{ config(materialized='view') }}
 
 select
     customer_id,

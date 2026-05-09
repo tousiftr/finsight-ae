@@ -1,4 +1,4 @@
-{{ config(materialized='view', alias='fct_daily_product_activity') }}
+{{ config(materialized='view') }}
 
 select
     event_timestamp::date as event_date,

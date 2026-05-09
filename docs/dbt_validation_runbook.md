@@ -30,7 +30,7 @@ order by table_name;
 Expected pattern:
 - `stg_*` => `VIEW`
 - `int_*` => `BASE TABLE`
-- `mrt_*` => `VIEW`
+- `mrt_rp_*` => `VIEW`
 
 ## 3) Row count validation SQL
 
@@ -41,7 +41,7 @@ select 'int_transactions', count(*) from dbt_fs.int_transactions
 union all
 select 'int_transactions_enriched', count(*) from dbt_fs.int_transactions_enriched
 union all
-select 'mrt_rp__finance_daily_transactions', count(*) from dbt_fs.mrt_rp__finance_daily_transactions;
+select 'mrt_rp_fin_daily_transactions', count(*) from dbt_fs.mrt_rp_fin_daily_transactions;
 ```
 
 Review for expected continuity across lineage. Minor differences are only expected when model logic intentionally changes grain.

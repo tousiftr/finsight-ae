@@ -10,7 +10,7 @@ Current implemented flow:
 2. Python micro-batch generators create raw domain files.
 3. Raw files are uploaded to Cloudflare R2 bucket `finsight-raw`.
 4. Raw files are loaded into Neon Postgres `raw` schema tables.
-5. dbt transforms raw data into `stg_*`, `int_*`, and `mrt_*` models in `dbt_fs`.
+5. dbt transforms raw data into `stg_*`, `int_*`, and `mrt_rp_<dept>_<model>` models in `dbt_fs`.
 
 ## Current pipeline status
 - ✅ Raw micro-ingestion is running through GitHub Actions.
@@ -43,8 +43,13 @@ Current implemented flow:
 │   │   ├── sources/                 # source() declarations for raw schema
 │   │   ├── staging/                 # stg_* source-cleaned views
 │   │   ├── intermediate/            # int_* trusted business truth tables
-│   │   └── mrt/
-│   │       └── rp/                  # current reporting mrt_* views
+│   │   └── mart/
+│   │       └── report/              # current reporting views named mrt_rp_<dept>_<model>
+│   │           ├── core/
+│   │           ├── finance/
+│   │           ├── growth/
+│   │           ├── product/
+│   │           └── risk/
 │   ├── tests/                       # custom dbt tests
 │   ├── macros/
 │   └── profiles.yml.example
@@ -68,7 +73,7 @@ Current implemented flow:
 - `raw.raw_*`: landed raw source tables
 - `dbt_fs.stg_*`: source-cleaned views (1-to-1 reshaping/typing)
 - `dbt_fs.int_*`: trusted, reusable business truth tables
-- `dbt_fs.mrt_*`: thin reporting/dashboard views
+- `dbt_fs.mrt_rp_<dept>_<model>`: thin reporting/dashboard views
 
 ### Materialization contract
 - Staging: `view`
@@ -97,7 +102,7 @@ Use SQL checks after `dbt build`:
 1. Validate expected materializations in `dbt_fs`:
    - `stg_*` => `VIEW`
    - `int_*` => `BASE TABLE`
-   - `mrt_*` => `VIEW`
+   - `mrt_rp_*` => `VIEW`
 2. Validate row counts between critical lineage steps.
 3. Validate relationship integrity (e.g., transactions to accounts/customers).
 
@@ -118,14 +123,16 @@ See `docs/dbt_validation_runbook.md` for exact commands and SQL.
 - Add additional source domains incrementally.
 - Move to BI serving only after dbt quality is stable.
 
-## Planned MRT organization
-Current MRT models live under `dbt_fintech/models/mrt/rp/`. To keep growth organized while preserving current naming contracts, the intended folder strategy is:
+## MART organization
+All mart models now live under one root folder: `dbt_fintech/models/mart/`. Current reporting marts are grouped by department in `models/mart/report/<department>/` and use the naming contract `mrt_rp_<dept>_<model>`:
 
-- `models/mrt/mrt_report/finance/` for finance reporting views
-- `models/mrt/mrt_report/project/` for project/ops reporting views
-- `models/mrt/mrt_cube/` reserved for semantic/analytics-serving preparation later
+- `core` => `mrt_rp_core_*` for shared customer/account dimensions and summaries
+- `finance` => `mrt_rp_fin_*` for finance transaction facts, KPIs, and merchant performance
+- `product` => `mrt_rp_prod_*` for activation and product activity
+- `growth` => `mrt_rp_grw_*` for funnel reporting
+- `risk` => `mrt_rp_risk_*` for KYC and customer risk reporting
 
-This is a planned organizational structure; no new tool stack is implemented yet.
+The `mart` root is intentionally ready for future semantic-layer or Cube-serving models without reintroducing parallel `marts`/`mrt` folders. No new semantic-serving tool stack is implemented yet.
 
 ## Explicitly not implemented yet
 Superset, Cube, Airflow, Dagster, and AI components are intentionally deferred until the dbt core is mature and stable.

@@ -16,19 +16,21 @@
 ## Layer definitions
 - `stg_*`: 1-to-1 source-cleaned views.
 - `int_*`: trusted business truth tables.
-- `mrt_*`: reporting views only.
+- `mrt_rp_<dept>_<model>`: reporting views only, organized under `models/mart/report/<department>/`.
 
 ## Materialization rules
 - Staging (`stg_*`) => `view`
 - Intermediate (`int_*`) => `table`
-- MRT (`mrt_*`) => `view`
+- MART/report (`mrt_rp_<dept>_<model>`) => `view`
 
 ## Logic placement rules
 - All joins belong in `int_*` models.
 - All calculations and enrichment belong in `int_*` models.
 - Reusable metric components belong in `int_*` models.
-- `mrt_*` must remain thin (report-ready projection only).
+- `mrt_rp_<dept>_<model>` models must remain thin (report-ready projection only).
 
 ## Naming rules
-- Do not use the word `mart` in model naming.
-- Use `mrt` naming only for reporting layer models.
+- Use one mart root folder: `models/mart/`. Do not create parallel `models/marts/` or `models/mrt/` roots.
+- Use `mrt_rp_<dept>_<model>` for report-serving mart models.
+- Department code examples: `core`, `fin`, `prod`, `grw`, and `risk`.
+- Use `dim_` and `fct_` after the department code when it helps future semantic-layer or Cube modeling.
