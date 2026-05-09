@@ -53,7 +53,7 @@ jobs:
                 password: "{{ env_var('DBT_PG_PASSWORD') }}"
                 port: "{{ env_var('DBT_PG_PORT', '5432') | int }}"
                 dbname: "{{ env_var('DBT_PG_DATABASE') }}"
-                schema: dbt_rad
+                schema: dbt_fs
                 sslmode: require
                 threads: 4
           PROFILE

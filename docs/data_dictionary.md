@@ -26,7 +26,7 @@
 - **Key columns:** `dt`, `batch_id`, `payload`, `source_object_key`, `raw_record_hash`.
 - **Important tests:** `dt`/`batch_id`/`payload`/`source_object_key` not null; `raw_record_hash` not null + unique.
 
-## Staging layer (`dbt_rad.stg_*`)
+## Staging layer (`dbt_fs.stg_*`)
 
 ### stg_customers
 - **Purpose:** Typed/cleaned customer records from raw source payload.
@@ -53,7 +53,7 @@
 - **Key columns:** `transaction_id`, `account_id`, `customer_id`, `amount`, `transaction_status`.
 - **Important tests:** `transaction_id` not null + unique; `account_id` and `customer_id` relationship tests; accepted status domain.
 
-## Reference seeds (`dbt_rad` seed tables)
+## Reference seeds (`dbt_fs` seed tables)
 
 ### account_types
 - **Purpose:** Lookup for broad account types and their labels/groups.
@@ -71,7 +71,7 @@
 - **Purpose:** Domain lookups used by staging relationship tests and downstream labels/status attributes.
 - **Grain:** One row per domain value.
 
-## Intermediate layer (`dbt_rad.int_*`)
+## Intermediate layer (`dbt_fs.int_*`)
 
 ### int_customers
 - **Purpose:** Trusted customer base table for downstream joins.
@@ -121,7 +121,7 @@
 - **Key columns:** `transaction_date`, `currency`, KPI columns.
 - **Important tests:** `transaction_date` not null; `currency` not null.
 
-## MRT layer (`dbt_rad.mrt_*`)
+## MRT layer (`dbt_fs.mrt_*`)
 
 ### mrt_rp__finance_daily_transactions
 - **Purpose:** Reporting-ready transaction detail view for finance use cases.

@@ -27,12 +27,12 @@ Raw data is loaded into the `raw` schema:
 ## Current schema strategy
 Only two schemas are used:
 - `raw` (ingestion-owned)
-- `dbt_rad` (dbt-owned)
+- `dbt_fs` (dbt-owned)
 
 No additional schemas are allowed.
 
 ## Current model layers
-Within `dbt_rad`:
+Within `dbt_fs`:
 - `stg_*` = source-cleaned views
 - `int_*` = trusted base-truth tables
 - `mrt_*` = reporting/dashboard views

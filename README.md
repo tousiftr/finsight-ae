@@ -10,7 +10,7 @@ Current implemented flow:
 2. Python micro-batch generators create raw domain files.
 3. Raw files are uploaded to Cloudflare R2 bucket `finsight-raw`.
 4. Raw files are loaded into Neon Postgres `raw` schema tables.
-5. dbt transforms raw data into `stg_*`, `int_*`, and `mrt_*` models in `dbt_rad`.
+5. dbt transforms raw data into `stg_*`, `int_*`, and `mrt_*` models in `dbt_fs`.
 
 ## Current pipeline status
 - ✅ Raw micro-ingestion is running through GitHub Actions.
@@ -61,14 +61,14 @@ Current implemented flow:
 ## dbt layer design
 ### Schema strategy (strict)
 - `raw` = ingestion-owned only
-- `dbt_rad` = dbt-owned only
+- `dbt_fs` = dbt-owned only
 - No extra schemas
 
 ### Layering and naming
 - `raw.raw_*`: landed raw source tables
-- `dbt_rad.stg_*`: source-cleaned views (1-to-1 reshaping/typing)
-- `dbt_rad.int_*`: trusted, reusable business truth tables
-- `dbt_rad.mrt_*`: thin reporting/dashboard views
+- `dbt_fs.stg_*`: source-cleaned views (1-to-1 reshaping/typing)
+- `dbt_fs.int_*`: trusted, reusable business truth tables
+- `dbt_fs.mrt_*`: thin reporting/dashboard views
 
 ### Materialization contract
 - Staging: `view`
@@ -94,7 +94,7 @@ dbt build
 ## How to validate Neon outputs
 Use SQL checks after `dbt build`:
 
-1. Validate expected materializations in `dbt_rad`:
+1. Validate expected materializations in `dbt_fs`:
    - `stg_*` => `VIEW`
    - `int_*` => `BASE TABLE`
    - `mrt_*` => `VIEW`

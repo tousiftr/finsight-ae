@@ -1,11 +1,11 @@
 # Raw Reset and Reload Runbook
 
-This runbook resets Neon `raw` tables, regenerates one clean local seed batch, optionally uploads it to Cloudflare R2, loads it into Neon idempotently, and rebuilds dbt models in `dbt_rad`.
+This runbook resets Neon `raw` tables, regenerates one clean local seed batch, optionally uploads it to Cloudflare R2, loads it into Neon idempotently, and rebuilds dbt models in `dbt_fs`.
 
 ## Safety boundaries
 
 - Do not commit `.env`, `.env.dbt`, `dbt_fintech/profiles.yml`, generated `data/raw`, or `dbt_fintech/target` artifacts.
-- The `raw` schema is ingestion-owned. The `dbt_rad` schema is dbt-owned.
+- The `raw` schema is ingestion-owned. The `dbt_fs` schema is dbt-owned.
 - Local reloads use `pg8000`; do not use `psycopg2` on Windows ARM64.
 - The loader uses `on conflict (source_object_key, raw_record_hash) do nothing`, so rerunning it against the same files skips duplicates.
 
@@ -116,13 +116,13 @@ select 'raw_transactions', count(*) from raw.raw_transactions;
 ### dbt staging counts
 
 ```sql
-select 'stg_customers' as model_name, count(*) from dbt_rad.stg_customers
+select 'stg_customers' as model_name, count(*) from dbt_fs.stg_customers
 union all
-select 'stg_accounts', count(*) from dbt_rad.stg_accounts
+select 'stg_accounts', count(*) from dbt_fs.stg_accounts
 union all
-select 'stg_merchants', count(*) from dbt_rad.stg_merchants
+select 'stg_merchants', count(*) from dbt_fs.stg_merchants
 union all
-select 'stg_transactions', count(*) from dbt_rad.stg_transactions;
+select 'stg_transactions', count(*) from dbt_fs.stg_transactions;
 ```
 
 ### Duplicate check

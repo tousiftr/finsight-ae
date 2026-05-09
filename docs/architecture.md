@@ -7,7 +7,7 @@ GitHub Actions
   -> Python micro-batch generator
   -> Cloudflare R2 (finsight-raw)
   -> Neon Postgres raw tables (schema: raw)
-  -> dbt models in schema dbt_rad:
+  -> dbt models in schema dbt_fs:
        - stg_* (views)
        - int_* (tables)
        - mrt_* (views)
@@ -18,11 +18,11 @@ GitHub Actions
 - **Python generators/loaders**: create raw micro-batches and execute load steps.
 - **Cloudflare R2**: durable raw landing zone.
 - **Neon Postgres (`raw`)**: ingestion-owned raw persistence.
-- **dbt (`dbt_rad`)**: transformation and analytics-layer modeling.
+- **dbt (`dbt_fs`)**: transformation and analytics-layer modeling.
 
 ## Data ownership and boundaries
 - `raw` schema is ingestion-owned and should not be used for business logic.
-- `dbt_rad` schema is dbt-owned and contains modeled analytics outputs.
+- `dbt_fs` schema is dbt-owned and contains modeled analytics outputs.
 - No extra schemas are part of current architecture.
 
 ## Future architecture (not implemented yet)
