@@ -1,14 +1,17 @@
-name: FinSight Manual Marts
+name: FinSight Daily Intermediate
 
 on:
   workflow_dispatch:
+  schedule:
+    # 09:00 and 21:00 Bangladesh time (UTC+06:00)
+    - cron: "0 3,15 * * *"
 
 concurrency:
-  group: finsight-manual-marts
+  group: finsight-daily-intermediate
   cancel-in-progress: false
 
 jobs:
-  manual-marts:
+  daily-intermediate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -59,6 +62,10 @@ jobs:
         working-directory: dbt_fintech
         run: dbt debug --profiles-dir .
 
-      - name: Run dbt marts only
+      - name: List dbt intermediate models
         working-directory: dbt_fintech
-        run: dbt build --profiles-dir . --select path:models/marts
+        run: dbt ls --profiles-dir . --select path:models/intermediate
+
+      - name: Run dbt intermediate models only
+        working-directory: dbt_fintech
+        run: dbt build --profiles-dir . --select path:models/intermediate
