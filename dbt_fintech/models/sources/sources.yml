@@ -47,11 +47,16 @@ sources:
 
       - name: raw_merchants
         description: >-
-          Raw merchant records loaded from generated JSONL files when the merchant
-          ingestion table is available. Merchant source tests are intentionally
-          omitted so dbt can still build merchant dimensions from transaction
-          merchant references in development databases that have not been
-          backfilled with raw.raw_merchants yet.
+          Raw merchant records loaded from generated JSONL files. Merchants are a
+          slower-changing dimension, so they intentionally have a slower freshness
+          SLA than event and transaction sources.
+        freshness:
+          warn_after:
+            count: 12
+            period: hour
+          error_after:
+            count: 24
+            period: hour
 
       - name: raw_transactions
         description: Raw transaction records loaded from generated JSONL files.
