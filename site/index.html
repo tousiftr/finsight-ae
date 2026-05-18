@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FinSight Analytics</title>
+  <meta name="description" content="FinSight Analytics is a live fintech analytics engineering portfolio project by Tousif Rad.">
+  <link rel="canonical" href="https://finsight.iamrad.info/">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top"><span>FS</span><strong>FinSight Analytics</strong></a>
+    <nav>
+      <a href="#architecture">Architecture</a>
+      <a href="#showcase">Showcase</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="https://iamrad.info/">iamrad.info</a>
+      <a class="button-small" href="https://github.com/tousiftr/finsight-ae">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">~/ portfolio_project --analytics-engineering</p>
+        <h1>Live fintech analytics engineering platform.</h1>
+        <p class="lead">FinSight shows how raw synthetic fintech data becomes governed reporting models through Python, Cloudflare R2, Neon Postgres, dbt, GitHub Actions, and later Superset, Airflow, Dagster, Cube, and AI.</p>
+        <div class="actions">
+          <a class="button" href="https://github.com/tousiftr/finsight-ae">View repo</a>
+          <a class="button ghost" href="#showcase">Explore proof boxes</a>
+        </div>
+      </div>
+      <aside class="terminal">
+        <div class="terminal-head"><span></span><span></span><span></span><b>status.finsight</b></div>
+        <pre>raw_ingestion:      running
+schedule:           every 10 minutes
+object_storage:     cloudflare_r2 / finsight-raw
+warehouse:          neon_postgres.raw
+dbt_schema:         dbt_fs
+models:             stg + int + mrt_rp
+next_public_layer:  superset dashboard</pre>
+      </aside>
+    </section>
+
+    <section class="stats">
+      <article><strong>149</strong><span>repo commits</span></article>
+      <article><strong>10 min</strong><span>ingestion cadence</span></article>
+      <article><strong>2</strong><span>active schemas</span></article>
+      <article><strong>3</strong><span>dbt model layers</span></article>
+    </section>
+
+    <section id="architecture" class="section split">
+      <div>
+        <p class="eyebrow">01 / architecture</p>
+        <h2>Pipeline story</h2>
+        <p>The current build focuses on reliable ingestion and dbt quality before public BI. This makes the portfolio credible because dashboard screenshots will sit on tested data, not one-off extracts.</p>
+      </div>
+      <div class="flow">
+        <span>GitHub Actions</span>
+        <span>Python micro-batches</span>
+        <span>Cloudflare R2 raw bucket</span>
+        <span>Neon Postgres raw</span>
+        <span>dbt_fs models</span>
+        <span class="next">Superset dashboard</span>
+        <span class="next">Airflow and Dagster proof</span>
+      </div>
+    </section>
+
+    <section id="showcase" class="section">
+      <p class="eyebrow">02 / small proof boxes</p>
+      <h2>Portfolio cards for each piece of work</h2>
+      <p class="section-lead">Each box can link to a repo folder, screenshot, docs page, dashboard tab, or runbook. Public proof goes here. Private tools stay private.</p>
+
+      <div class="grid">
+        <article class="card live"><small>Live · automation</small><h3>GitHub Actions Pipeline</h3><p>Micro-batch jobs generate raw data, upload to R2, load Neon, and run dbt through a separate workflow.</p><a href="https://github.com/tousiftr/finsight-ae/actions">Open workflow runs</a></article>
+        <article class="card live"><small>Live · raw layer</small><h3>Cloudflare R2 Landing Zone</h3><p>Raw files land before warehouse loading, creating a replayable ingestion pattern.</p><a href="https://github.com/tousiftr/finsight-ae/tree/main/object_storage">View object storage code</a></article>
+        <article class="card live"><small>Live · warehouse</small><h3>Neon Raw Tables</h3><p>Customers, accounts, merchants, and transactions load into ingestion-owned raw tables.</p><a href="https://github.com/tousiftr/finsight-ae/tree/main/loaders">View loader code</a></article>
+        <article class="card live"><small>Live · modeling</small><h3>dbt Modeling Layer</h3><p>Staging views, intermediate tables, and reporting marts support dashboard-ready analytics outputs.</p><a href="https://github.com/tousiftr/finsight-ae/tree/main/dbt_fintech">View dbt project</a></article>
+        <article class="card next"><small>Next · BI</small><h3>Superset Dashboard</h3><p>Executive, finance, product, growth, risk, and pipeline health tabs will sit on dbt marts.</p><a href="https://github.com/tousiftr/finsight-ae/tree/main/superset">View Superset folder</a></article>
+        <article class="card next"><small>Next · orchestration</small><h3>Airflow DAG</h3><p>A local DAG will mirror the GitHub Actions pipeline and show dependencies, retries, and logs.</p><a href="#roadmap">See orchestration plan</a></article>
+        <article class="card next"><small>Next · lineage</small><h3>Dagster Asset Graph</h3><p>Dagster will show raw, staging, intermediate, and mart assets as a lineage graph.</p><a href="#roadmap">See lineage plan</a></article>
+        <article class="card live"><small>Live · docs</small><h3>Runbooks and Data Contracts</h3><p>Architecture notes, current-state docs, data dictionary, modeling contract, and metrics docs explain the system.</p><a href="https://github.com/tousiftr/finsight-ae/tree/main/docs">Open docs</a></article>
+        <article class="card later"><small>Later · semantic layer</small><h3>Cube Metrics Layer</h3><p>Governed metrics can be served through Cube after the dashboard layer is stable.</p><a href="#roadmap">See semantic roadmap</a></article>
+        <article class="card later"><small>Later · AI</small><h3>AI Analytics Assistant</h3><p>A RAG assistant can explain metrics, docs, dbt tests, dashboard changes, and data quality failures.</p><a href="#roadmap">See AI roadmap</a></article>
+      </div>
+    </section>
+
+    <section class="section split">
+      <div class="checklist">
+        <h3>Public proof checklist</h3>
+        <ul>
+          <li><b>Done</b> Repo README and folder structure</li>
+          <li><b>Done</b> Current-state documentation</li>
+          <li><b>Done</b> dbt validation runbook</li>
+          <li><b>Next</b> dbt docs screenshot or hosted docs</li>
+          <li><b>Next</b> Superset dashboard screenshots</li>
+          <li><b>Next</b> Airflow DAG screenshot</li>
+          <li><b>Next</b> Dagster asset graph screenshot</li>
+        </ul>
+      </div>
+      <div>
+        <p class="eyebrow">03 / positioning</p>
+        <h2>What this proves</h2>
+        <p>FinSight demonstrates analytics engineering judgment: raw storage before loading, dbt contracts, schema ownership, validation checks, thin marts, documentation, and staged rollout of BI and orchestration tools.</p>
+        <div class="tags"><span>Python</span><span>Cloudflare R2</span><span>Neon Postgres</span><span>dbt</span><span>GitHub Actions</span><span>Superset</span><span>Airflow</span><span>Dagster</span><span>Data Quality</span></div>
+      </div>
+    </section>
+
+    <section id="roadmap" class="section">
+      <p class="eyebrow">04 / roadmap</p>
+      <h2>Build order for the public showcase</h2>
+      <div class="timeline">
+        <article><span>1</span><h3>Publish this subdomain</h3><p>Deploy the static showcase at finsight.iamrad.info and link it from iamrad.info Projects.</p></article>
+        <article><span>2</span><h3>Add dbt docs proof</h3><p>Generate dbt docs, capture lineage screenshots, and link metric definitions.</p></article>
+        <article><span>3</span><h3>Create Superset dashboard</h3><p>Build tabs for executive overview, finance, product, growth, risk, and pipeline health.</p></article>
+        <article><span>4</span><h3>Add Airflow and Dagster screenshots</h3><p>Keep UIs private, publish screenshots as proof of orchestration and lineage.</p></article>
+        <article><span>5</span><h3>Add Cube and AI later</h3><p>Add semantic serving and assistant features only after marts and dashboard usage are stable.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>FinSight Analytics by <a href="https://iamrad.info/">Tousif Rad</a></p>
+    <p><a href="https://github.com/tousiftr/finsight-ae">GitHub repo</a> · <a href="https://iamrad.info/">Main portfolio</a></p>
+  </footer>
+</body>
+</html>
