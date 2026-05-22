@@ -1,11 +1,12 @@
-
-.env.dbt
-
 # Secrets
 .env
 .env.*
-!.env.example
+*.env
 .env.dbt
+
+# Keep example env files safe to commit
+!.env.example
+!*.env.example
 
 # Python environments
 .venv/
@@ -16,19 +17,19 @@ __pycache__/
 *.pyc
 
 # Generated/local data
-data/raw/
 data/
+data/raw/
 
 # dbt artifacts
 dbt_fintech/target/
 dbt_fintech/logs/
 
-
 # dbt local/user config
 dbt_fintech/.user.yml
 dbt_fintech/profiles.yml
 
+# Streamlit local secrets
+.streamlit/secrets.toml
+
 # temporary backups
 *_backup.py
-
-/.env.example

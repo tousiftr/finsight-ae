@@ -1,0 +1,7 @@
+streamlit
+pygwalker
+pandas
+sqlalchemy
+pg8000
+python-dotenv
+tornado
