@@ -1,4 +1,4 @@
-{{ config(materialized='table') }}
+{{ config(materialized='table', tags=['product_analytics_hourly']) }}
 
 select
     event_timestamp::date as activity_date,

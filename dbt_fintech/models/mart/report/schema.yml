@@ -135,3 +135,16 @@ models:
     columns:
       - name: customer_id
         tests: [not_null, unique]
+
+
+  - name: mixpanel_events_export
+    description: This model exports KYC and product analytics events from Neon/dbt into a Mixpanel-ready event shape for hourly product analytics sync.
+    columns:
+      - name: event_name
+        tests: [not_null]
+      - name: distinct_id
+        tests: [not_null]
+      - name: event_time
+        tests: [not_null]
+      - name: insert_id
+        tests: [not_null, unique]
