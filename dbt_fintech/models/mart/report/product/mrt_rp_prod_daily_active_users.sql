@@ -1,4 +1,4 @@
-{{ config(materialized='view') }}
+{{ config(materialized='view', tags=['product_analytics_hourly']) }}
 
 select
     activity_date,

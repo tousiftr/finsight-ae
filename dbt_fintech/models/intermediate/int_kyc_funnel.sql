@@ -1,4 +1,4 @@
-{{ config(materialized='table') }}
+{{ config(materialized='table', tags=['product_analytics_hourly']) }}
 
 select
     customer_id,
