@@ -32,4 +32,4 @@ dbt_fintech/profiles.yml
 .streamlit/secrets.toml
 
 # temporary backups
-*_backup.py
+*_backup.py.env.mixpanel
