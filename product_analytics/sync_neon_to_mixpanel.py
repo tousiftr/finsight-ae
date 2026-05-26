@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
+import re
 from datetime import datetime, timezone
 from urllib.parse import urlencode, urlparse, unquote
 from urllib.request import Request, urlopen
-import base64
 
 import pg8000.dbapi
+
+
+SAFE_TABLE_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$")
 
 
 def _parse_neon_url(database_url: str) -> dict[str, object]:
@@ -27,6 +31,24 @@ def _to_epoch_seconds(value: datetime) -> int:
     return int(value.timestamp())
 
 
+def _normalize_properties(value: object) -> dict[str, object]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        return json.loads(value)
+    return dict(value)  # type: ignore[arg-type]
+
+
+def _validate_export_table(export_table: str) -> str:
+    if not SAFE_TABLE_PATTERN.match(export_table):
+        raise ValueError(
+            "Invalid MIXPANEL_EXPORT_TABLE. Use schema.table or table_name with letters, numbers, and underscores only."
+        )
+    return export_table
+
+
 def main() -> int:
     neon_database_url = os.getenv("NEON_DATABASE_URL")
     project_id = os.getenv("MIXPANEL_PROJECT_ID")
@@ -34,7 +56,10 @@ def main() -> int:
     service_secret = os.getenv("MIXPANEL_SERVICE_ACCOUNT_SECRET")
     region = os.getenv("MIXPANEL_REGION", "api")
     batch_size = int(os.getenv("MIXPANEL_BATCH_SIZE", "20"))
-    export_table = os.getenv("MIXPANEL_EXPORT_TABLE", "dbt_fs.mixpanel_events_export")
+    export_table = _validate_export_table(
+        os.getenv("MIXPANEL_EXPORT_TABLE", "dbt_fs.mixpanel_events_export")
+    )
+    dry_run = os.getenv("MIXPANEL_DRY_RUN", "false").lower() in {"1", "true", "yes"}
 
     required = {
         "NEON_DATABASE_URL": neon_database_url,
@@ -42,7 +67,7 @@ def main() -> int:
         "MIXPANEL_SERVICE_ACCOUNT_USER": service_user,
         "MIXPANEL_SERVICE_ACCOUNT_SECRET": service_secret,
     }
-    missing = [k for k, v in required.items() if not v]
+    missing = [key for key, value in required.items() if not value]
     if missing:
         print(f"Mixpanel sync skipped: missing required environment variable(s): {', '.join(missing)}")
         print("No events sent.")
@@ -52,9 +77,19 @@ def main() -> int:
     cur = conn.cursor()
     cur.execute(
         f"""
-        select event_name, distinct_id, event_time, insert_id, event_properties
+        select
+            source_event_id,
+            event_name,
+            distinct_id,
+            event_time,
+            insert_id,
+            event_source,
+            event_properties
         from {export_table}
-        where event_time is not null
+        where event_name is not null
+          and distinct_id is not null
+          and event_time is not null
+          and insert_id is not null
         order by event_time asc
         limit %s
         """,
@@ -69,21 +104,27 @@ def main() -> int:
         return 0
 
     events = []
-    for event_name, distinct_id, event_time, insert_id, event_properties in rows:
-        props = event_properties or {}
-        if isinstance(props, str):
-            props = json.loads(props)
+    for source_event_id, event_name, distinct_id, event_time, insert_id, event_source, event_properties in rows:
+        props = _normalize_properties(event_properties)
         props.update(
             {
                 "time": _to_epoch_seconds(event_time),
                 "distinct_id": str(distinct_id),
                 "$insert_id": str(insert_id),
+                "source_event_id": str(source_event_id),
+                "event_source": str(event_source),
+                "pipeline_source": "finsight_neon_dbt",
             }
         )
-        events.append({"event": event_name, "properties": props})
+        events.append({"event": str(event_name), "properties": props})
 
+    print(f"Prepared {len(events)} event(s) from {export_table}.")
     print("First event preview:")
     print(json.dumps(events[0], indent=2, default=str))
+
+    if dry_run:
+        print("MIXPANEL_DRY_RUN=true, no events sent.")
+        return 0
 
     endpoint = f"https://{region}.mixpanel.com/import"
     query = urlencode({"strict": 1, "project_id": project_id})
