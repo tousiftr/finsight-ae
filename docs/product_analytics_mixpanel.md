@@ -1,85 +1,119 @@
-# Product Analytics Hourly Lane + Mixpanel Export
+# Product Analytics to Mixpanel (Manual First)
 
 ## Architecture
-- **Daily warehouse lane**: keep broad intermediate/mart refreshes on daily cadence.
-- **Hourly product analytics lane**: run only dbt models tagged `product_analytics_hourly`, then run optional Python sync.
-- **Mixpanel integration path**: Airflow runs Python script that reads modeled events from Neon/dbt output and sends to Mixpanel Import API (future implementation).
+Neon Postgres  
+→ dbt product/KYC models  
+→ `dbt_fs.mixpanel_events_export`  
+→ `product_analytics/sync_neon_to_mixpanel.py`  
+→ Mixpanel Import API  
+→ (Later) Airflow hourly DAG
 
-## dbt hourly tag strategy
-The following models are tagged `product_analytics_hourly` and intended for hourly refresh:
-- `int_kyc_funnel`
-- `int_daily_user_activity`
-- `mrt_rp_prod_activation`
-- `mrt_rp_prod_daily_active_users`
-- `mrt_rp_prod_fct_daily_product_activity`
-- `mixpanel_events_export`
+## Why Python Import API (not Warehouse Connector)
+This implementation is intentionally based on Mixpanel Import API so it works with the free Mixpanel plan and allows strict event-volume control via batch limits.
 
-Use selector:
-```bash
-dbt build --select tag:product_analytics_hourly
-```
+## Free-plan-safe event volume strategy
+- Export model emits only core product/KYC milestones.
+- Sync script reads only `MIXPANEL_BATCH_SIZE` rows per run (default `20`).
+- Manual run first; scale frequency only after validation in Mixpanel Live View.
 
-For daily broad refreshes (if/when wired in Airflow):
-```bash
-dbt build --select path:models/intermediate path:models/mart --exclude tag:product_analytics_hourly
-```
-
-## Mixpanel export model columns
-`mixpanel_events_export` emits one event row per record with:
+## dbt export model (`mixpanel_events_export`) columns
 - `source_event_id`
 - `event_name`
 - `distinct_id` (customer_id as text)
-- `event_time`
-- `insert_id` (deterministic md5 hash)
+- `event_time` (real source timestamp)
+- `insert_id` (deterministic hash)
 - `event_source`
-- `event_properties` (JSONB context, no direct PII)
+- `event_properties` (JSONB, non-PII)
 
-Supported normalized event names (only when source data exists):
-- User Registered
-- KYC Submitted
-- KYC Approved
-- KYC Rejected
-- Account Activated
-- Feature Used
-- Transaction Started
-- Transaction Completed
-
-## Airflow hourly DAG
-DAG: `finsight_product_analytics_hourly`
-- Schedule: hourly (`0 * * * *`)
-- `catchup=False`
-- `max_active_runs=1`
-- Task order: `dbt_build_product_analytics >> sync_mixpanel_events`
-
-Environment variable defaults:
-- `DBT_PROJECT_DIR=/opt/finsight-ae/dbt_fintech`
-- `DBT_PRODUCT_ANALYTICS_SELECTOR=tag:product_analytics_hourly`
-- `MIXPANEL_SYNC_SCRIPT=/opt/finsight-ae/product_analytics/sync_neon_to_mixpanel.py`
+## PII exclusions
+Excluded from payload:
+- full name
+- email
+- phone
+- address
+- document numbers
+- other raw identity fields
 
 ## Environment variables
 - `NEON_DATABASE_URL`
-- `MIXPANEL_PROJECT_ID`
+- `MIXPANEL_PROJECT_ID=1d824830977ff0a48a92d961828f7e93`
 - `MIXPANEL_SERVICE_ACCOUNT_USER`
 - `MIXPANEL_SERVICE_ACCOUNT_SECRET`
-- `MIXPANEL_REGION` (default `api`)
-- `MIXPANEL_BATCH_SIZE` (default `1000`)
+- `MIXPANEL_REGION=api`
+- `MIXPANEL_BATCH_SIZE=20`
+- `MIXPANEL_EXPORT_TABLE=dbt_fs.mixpanel_events_export`
 
-## Local test flow
-1. `dbt ls --select tag:product_analytics_hourly`
-2. `dbt build --select tag:product_analytics_hourly`
-3. `python /opt/finsight-ae/product_analytics/sync_neon_to_mixpanel.py`
-4. `airflow dags test finsight_product_analytics_hourly 2026-05-25`
+## Manual validation commands
+```bash
+cd /opt/finsight-ae/airflow
 
-## PII safety guardrails
-Do **not** send:
-- Full names
-- Email addresses
-- Phone numbers
-- Postal addresses
-- Government/document numbers
+docker compose exec airflow-webserver bash -lc '
+cd /opt/finsight-ae/dbt_fintech
+dbt ls --select tag:product_analytics_hourly
+'
 
-Only include operational/product context needed for analytics.
+docker compose exec airflow-webserver bash -lc '
+cd /opt/finsight-ae/dbt_fintech
+dbt build --select tag:product_analytics_hourly
+'
+
+docker compose exec airflow-webserver bash -lc '
+python - <<PY
+import os
+import pg8000.dbapi
+from urllib.parse import urlparse, unquote
+
+url = os.environ["NEON_DATABASE_URL"]
+p = urlparse(url)
+
+conn = pg8000.dbapi.connect(
+    user=unquote(p.username or ""),
+    password=unquote(p.password or ""),
+    host=p.hostname,
+    port=p.port or 5432,
+    database=unquote(p.path.lstrip("/")),
+    ssl_context=True,
+)
+
+cur = conn.cursor()
+cur.execute("""
+select
+    event_name,
+    count(*) as event_count,
+    min(event_time) as first_event_time,
+    max(event_time) as last_event_time
+from dbt_fs.mixpanel_events_export
+group by event_name
+order by event_count desc;
+""")
+
+for row in cur.fetchall():
+    print(row)
+
+cur.close()
+conn.close()
+PY
+'
+```
+
+Manual sync:
+```bash
+cd /opt/finsight-ae/airflow
+
+docker compose exec airflow-webserver bash -lc '
+cd /opt/finsight-ae
+set -a
+source /opt/finsight-ae/.env.mixpanel
+set +a
+python product_analytics/sync_neon_to_mixpanel.py
+'
+```
+
+## Later Airflow integration plan (after manual success)
+Hourly DAG steps:
+1. `dbt build --select tag:product_analytics_hourly`
+2. `python product_analytics/sync_neon_to_mixpanel.py`
 
 ## Example Mixpanel funnels
-1. `User Registered -> KYC Submitted -> KYC Approved -> Account Activated`
-2. `Account Activated -> Feature Used -> Transaction Completed`
+- `User Registered -> KYC Submitted -> KYC Approved -> Account Activated`
+- `Account Activated -> Feature Used -> Transaction Completed`

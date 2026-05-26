@@ -138,13 +138,23 @@ models:
 
 
   - name: mixpanel_events_export
-    description: This model exports KYC and product analytics events from Neon/dbt into a Mixpanel-ready event shape for hourly product analytics sync.
+    description: Product analytics export model that normalizes product and KYC lifecycle milestones into Mixpanel Import API event format.
     columns:
+      - name: source_event_id
+        description: Source-system event identifier from staged product or KYC records.
       - name: event_name
+        description: Normalized product analytics event name supported by Mixpanel export policy.
         tests: [not_null]
       - name: distinct_id
+        description: Customer identifier cast to text for Mixpanel distinct_id.
         tests: [not_null]
       - name: event_time
+        description: True event timestamp from source domain record.
         tests: [not_null]
       - name: insert_id
+        description: Deterministic hash for idempotent Mixpanel imports.
         tests: [not_null, unique]
+      - name: event_source
+        description: Upstream model name that produced this event.
+      - name: event_properties
+        description: JSONB map of non-PII event context properties.
