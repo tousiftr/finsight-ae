@@ -6,7 +6,7 @@ with product_events as (
         customer_id,
         account_id,
         session_id,
-        event_name,
+        event_name as raw_event_name,
         event_timestamp,
         platform,
         feature_name,
@@ -15,67 +15,91 @@ with product_events as (
     where customer_id is not null
       and event_timestamp is not null
 ),
-kyc_events as (
-    select
-        raw_kyc_application_id as source_event_id,
-        case
-            when submitted_at is not null then 'KYC Submitted'
-            when kyc_status = 'approved' and reviewed_at is not null then 'KYC Approved'
-            when kyc_status = 'rejected' and reviewed_at is not null then 'KYC Rejected'
-        end as event_name,
-        customer_id::text as distinct_id,
-        coalesce(
-            case when submitted_at is not null then submitted_at end,
-            case when kyc_status in ('approved', 'rejected') then reviewed_at end
-        ) as event_time,
-        'stg_kyc_applications' as event_source,
-        jsonb_strip_nulls(jsonb_build_object(
-            'source', 'kyc_application',
-            'customer_id', customer_id,
-            'kyc_application_id', kyc_application_id,
-            'kyc_status', kyc_status,
-            'kyc_level', kyc_level,
-            'country', country,
-            'review_channel', review_channel,
-            'reviewer_type', reviewer_type
-        )) as event_properties
-    from {{ ref('stg_kyc_applications') }}
-    where customer_id is not null
-),
 product_events_normalized as (
     select
         event_id as source_event_id,
         case
-            when event_name = 'signup_completed' then 'User Registered'
-            when event_name = 'account_created' then 'Account Activated'
-            when event_name = 'transfer_started' then 'Transaction Started'
-            when event_name = 'transfer_completed' then 'Transaction Completed'
-            when event_name = 'crypto_buy_clicked' then 'Feature Used'
-            when event_name = 'deposit_completed' then 'Account Activated'
-            when event_name = 'deposit_started' then 'Transaction Started'
+            when raw_event_name = 'signup_completed' then 'User Registered'
+            when raw_event_name = 'kyc_submitted' then 'KYC Submitted'
+            when raw_event_name = 'pin_set' then 'PIN Set'
+            when raw_event_name in ('account_created', 'deposit_completed') then 'Account Activated'
+            when raw_event_name = 'transfer_started' then 'Transaction Started'
+            when raw_event_name = 'transfer_completed' then 'Transaction Completed'
+            when raw_event_name in ('crypto_buy_clicked', 'card_tapped', 'billpay_initiated') then 'Feature Used'
             else null
         end as event_name,
         customer_id::text as distinct_id,
         event_timestamp as event_time,
         'stg_product_events' as event_source,
         jsonb_strip_nulls(jsonb_build_object(
-            'source', 'product_event',
-            'customer_id', customer_id,
-            'account_id', account_id,
-            'session_id', session_id,
             'platform', platform,
             'feature_name', feature_name,
-            'raw_event_name', event_name,
-            'event_properties', event_properties
+            'channel', event_properties ->> 'channel',
+            'account_type', event_properties ->> 'account_type',
+            'product_area', event_properties ->> 'product_area',
+            'country', event_properties ->> 'country',
+            'raw_event_name', raw_event_name,
+            'event_source', 'stg_product_events',
+            'session_id', session_id,
+            'account_id', account_id
         )) as event_properties
     from product_events
+),
+kyc_events as (
+    select
+        raw_kyc_application_id as source_event_id,
+        event_name,
+        customer_id::text as distinct_id,
+        event_time,
+        'stg_kyc_applications' as event_source,
+        jsonb_strip_nulls(jsonb_build_object(
+            'kyc_status', kyc_status,
+            'kyc_level', kyc_level,
+            'country', country,
+            'channel', review_channel,
+            'product_area', 'kyc',
+            'event_source', 'stg_kyc_applications'
+        )) as event_properties
+    from (
+        select
+            raw_kyc_application_id,
+            customer_id,
+            submitted_at as event_time,
+            'KYC Submitted' as event_name,
+            kyc_status,
+            kyc_level,
+            country,
+            review_channel
+        from {{ ref('stg_kyc_applications') }}
+        where customer_id is not null
+          and submitted_at is not null
+
+        union all
+
+        select
+            raw_kyc_application_id,
+            customer_id,
+            reviewed_at as event_time,
+            case
+                when kyc_status = 'approved' then 'KYC Approved'
+                when kyc_status = 'rejected' then 'KYC Rejected'
+            end as event_name,
+            kyc_status,
+            kyc_level,
+            country,
+            review_channel
+        from {{ ref('stg_kyc_applications') }}
+        where customer_id is not null
+          and reviewed_at is not null
+          and kyc_status in ('approved', 'rejected')
+    ) e
 )
 select
     source_event_id,
     event_name,
     distinct_id,
     event_time,
-    md5(concat_ws('||', source_event_id, event_name, distinct_id, event_time::text)) as insert_id,
+    md5(concat_ws('||', source_event_id, event_name, distinct_id, event_time::text, event_source)) as insert_id,
     event_source,
     event_properties
 from (
