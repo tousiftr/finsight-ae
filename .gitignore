@@ -38,3 +38,10 @@ dbt_fintech/profiles.yml
 .tmp_dagster_home_*/
 .tmp_dagster_home*/
 dagster_home/
+.env
+*.env
+airflow/logs/
+airflow/.env.airflow
+__pycache__/
+*.pyc
+.tmp_dagster_home*/
