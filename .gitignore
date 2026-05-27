@@ -47,3 +47,4 @@ __pycache__/
 .tmp_dagster_home*/
 
 **/.env
+airflow/.env
