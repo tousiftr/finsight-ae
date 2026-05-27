@@ -134,5 +134,16 @@ All mart models now live under one root folder: `dbt_fintech/models/mart/`. Curr
 
 The `mart` root is intentionally ready for future semantic-layer or Cube-serving models without reintroducing parallel `marts`/`mrt` folders. No new semantic-serving tool stack is implemented yet.
 
+
+## Airflow + Mixpanel Product Analytics Sync
+- **What it does:** Runs an hourly orchestration that builds product analytics models in dbt and syncs unsynced events to Mixpanel via the Import API.
+- **Airflow URL:** `https://<your-airflow-domain>` (for this deployment: `https://airflow.iamrad.info`).
+- **DAG name:** `finsight_mixpanel_hourly_sync`
+- **Schedule:** hourly
+- **Delivery endpoint:** Mixpanel Import API
+- **Duplicate protection log table:** `metadata.mixpanel_sync_log`
+- **Milestone runbook:** `docs/airflow_mixpanel_sync_milestone.md`
+- **Secret rotation guide:** `docs/secret_rotation_checklist.md`
+
 ## Explicitly not implemented yet
 Superset, Cube, Airflow, Dagster, and AI components are intentionally deferred until the dbt core is mature and stable.

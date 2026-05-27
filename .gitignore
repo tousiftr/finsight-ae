@@ -7,6 +7,7 @@
 # Keep example env files safe to commit
 !.env.example
 !*.env.example
+!**/*.env.example
 
 # Python environments
 .venv/
@@ -33,3 +34,4 @@ dbt_fintech/profiles.yml
 
 # temporary backups
 *_backup.py.env.mixpanel
+!airflow/.env.airflow.example
