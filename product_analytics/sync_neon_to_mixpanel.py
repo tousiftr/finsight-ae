@@ -156,11 +156,13 @@ def main() -> int:
         print("No events sent.")
         return 1
 
-    batch_size = int(os.getenv("MIXPANEL_BATCH_SIZE", "20"))
+    batch_size = int(os.getenv("MIXPANEL_BATCH_SIZE", "2000"))
+    backfill_start_at = os.getenv("MIXPANEL_BACKFILL_START_AT", "2026-03-01 00:00:00")
     dry_run = os.getenv("MIXPANEL_DRY_RUN", "true").lower() in {"1", "true", "yes"}
 
     print(f"Export table: {export_table}")
     print(f"Batch size: {batch_size}")
+    print(f"Backfill start at: {backfill_start_at}")
     print(f"Dry run: {dry_run}")
 
     conn = pg8000.dbapi.connect(ssl_context=True, **_parse_neon_url(neon_database_url))
@@ -179,6 +181,7 @@ def main() -> int:
         from {export_table}
         where event_name is not null
           and distinct_id is not null
+          and event_time >= %s::timestamp
           and event_time is not null
           and insert_id is not null
           and not exists (
@@ -190,7 +193,7 @@ def main() -> int:
         order by event_time asc
         limit %s
         """,
-        (batch_size,),
+        (backfill_start_at, batch_size),
     )
     rows = cur.fetchall()
     cur.close()
