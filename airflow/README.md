@@ -114,3 +114,123 @@ Do not expose Airflow's container port directly to the public internet.
 6. Existing GitHub Actions pipeline remains unchanged.
 
 Only after this sidecar is stable should a separate pipeline DAG be added.
+
+## Mixpanel hourly sync configuration (March 2026 onward)
+
+Airflow runs the Mixpanel product analytics sync hourly using `airflow/dags/finsight_product_analytics_hourly.py`, which executes `product_analytics/sync_neon_to_mixpanel.py`.
+
+Key environment controls:
+
+- `MIXPANEL_BACKFILL_START_AT`: lower bound for eligible `event_time` rows (inclusive).
+- `MIXPANEL_BATCH_SIZE`: max events sent per run.
+- `MIXPANEL_DRY_RUN`: when `true`, prepares events without sending to Mixpanel.
+
+Production target for this project is syncing events from **2026-03-01 00:00:00 onward** with **2000 events per hourly run**.
+
+The sync is idempotent because successful `$insert_id` values are tracked in `metadata.mixpanel_sync_log`, and already successful rows are excluded from future sends.
+
+### Safe validation command
+
+```bash
+cd /opt/finsight-dagster
+set -a
+source airflow/.env.airflow
+set +a
+
+python product_analytics/sync_neon_to_mixpanel.py
+```
+
+Expected dry-run output includes:
+
+- `Batch size: 2000`
+- `Backfill start at: 2026-03-01 00:00:00`
+- `Dry run: True`
+- `Prepared N event(s)`
+- `MIXPANEL_DRY_RUN=true, no events sent.`
+
+Expected real-sync output includes:
+
+- `Batch size: 2000`
+- `Backfill start at: 2026-03-01 00:00:00`
+- `Dry run: False`
+- `Prepared N event(s)`
+- `Mixpanel response status: 200`
+- `Successfully sent N events to Mixpanel.`
+
+### VM deployment commands
+
+Run after pulling latest code:
+
+```bash
+cd /opt/finsight-dagster
+git pull origin main
+
+grep -q '^MIXPANEL_BATCH_SIZE=' airflow/.env.airflow \
+  && sed -i 's/^MIXPANEL_BATCH_SIZE=.*/MIXPANEL_BATCH_SIZE=2000/' airflow/.env.airflow \
+  || echo 'MIXPANEL_BATCH_SIZE=2000' >> airflow/.env.airflow
+
+grep -q '^MIXPANEL_BACKFILL_START_AT=' airflow/.env.airflow \
+  && sed -i 's/^MIXPANEL_BACKFILL_START_AT=.*/MIXPANEL_BACKFILL_START_AT=2026-03-01 00:00:00/' airflow/.env.airflow \
+  || echo 'MIXPANEL_BACKFILL_START_AT=2026-03-01 00:00:00' >> airflow/.env.airflow
+
+grep -q '^MIXPANEL_DRY_RUN=' airflow/.env.airflow \
+  && sed -i 's/^MIXPANEL_DRY_RUN=.*/MIXPANEL_DRY_RUN=true/' airflow/.env.airflow \
+  || echo 'MIXPANEL_DRY_RUN=true' >> airflow/.env.airflow
+
+grep -E "MIXPANEL_BATCH_SIZE|MIXPANEL_BACKFILL_START_AT|MIXPANEL_DRY_RUN" airflow/.env.airflow
+```
+
+### Safe dry-run then real-sync runbook
+
+```bash
+cd /opt/finsight-dagster
+set -a
+source airflow/.env.airflow
+set +a
+python product_analytics/sync_neon_to_mixpanel.py
+```
+
+If dry run output looks correct, enable real sync:
+
+```bash
+sed -i 's/^MIXPANEL_DRY_RUN=.*/MIXPANEL_DRY_RUN=false/' airflow/.env.airflow
+```
+
+Restart Airflow:
+
+```bash
+cd /opt/finsight-dagster/airflow
+docker compose restart
+docker compose ps
+```
+
+Run one manual real batch:
+
+```bash
+cd /opt/finsight-dagster
+set -a
+source airflow/.env.airflow
+set +a
+python product_analytics/sync_neon_to_mixpanel.py
+```
+
+### Optional March backfill loop
+
+Stop early when output indicates no rows found.
+
+```bash
+cd /opt/finsight-dagster
+set -a
+source airflow/.env.airflow
+set +a
+
+for i in {1..20}; do
+  echo "===== Mixpanel March backfill batch $i ====="
+  python product_analytics/sync_neon_to_mixpanel.py
+  echo
+ done
+```
+
+### Verification helper
+
+Use `scripts/check_mixpanel_sync_status.py` to verify sync coverage/status for events with `event_time >= 2026-03-01`.
