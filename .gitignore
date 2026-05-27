@@ -35,3 +35,6 @@ dbt_fintech/profiles.yml
 # temporary backups
 *_backup.py.env.mixpanel
 !airflow/.env.airflow.example
+.tmp_dagster_home_*/
+.tmp_dagster_home*/
+dagster_home/

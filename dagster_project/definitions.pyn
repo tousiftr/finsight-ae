@@ -1,0 +1,39 @@
+from dagster import Definitions, ScheduleDefinition, asset
+import subprocess
+
+PROJECT_ROOT = "/opt/finsight-dagster"
+DBT_DIR = f"{PROJECT_ROOT}/dbt_fintech"
+
+
+def run_dbt(command: list[str]):
+    subprocess.run(
+        command,
+        cwd=DBT_DIR,
+        check=True,
+    )
+
+
+@asset
+def dbt_intermediate_daily():
+    run_dbt(["dbt", "build", "--select", "path:models/intermediate"])
+
+
+@asset
+def dbt_marts_2hour():
+    run_dbt(["dbt", "build", "--select", "mrt_*"])
+
+
+intermediate_daily_schedule = ScheduleDefinition(
+    job=dbt_intermediate_daily.to_job(),
+    cron_schedule="0 2 * * *",
+)
+
+marts_2hour_schedule = ScheduleDefinition(
+    job=dbt_marts_2hour.to_job(),
+    cron_schedule="0 */2 * * *",
+)
+
+defs = Definitions(
+    assets=[dbt_intermediate_daily, dbt_marts_2hour],
+    schedules=[intermediate_daily_schedule, marts_2hour_schedule],
+)
