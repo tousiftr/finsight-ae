@@ -3,11 +3,16 @@
 .env.*
 *.env
 .env.dbt
+*.env.mixpanel
+airflow/.env
+airflow/.env.airflow
+dbt_fintech/profiles.yml
+.streamlit/secrets.toml
 
 # Keep example env files safe to commit
 !.env.example
 !*.env.example
-!**/*.env.example
+!dbt_fintech/profiles.yml.example
 
 # Python environments
 .venv/
@@ -15,6 +20,7 @@
 
 # Python cache
 __pycache__/
+**/__pycache__/
 *.pyc
 
 # Generated/local data
@@ -24,27 +30,19 @@ data/raw/
 # dbt artifacts
 dbt_fintech/target/
 dbt_fintech/logs/
-
-# dbt local/user config
 dbt_fintech/.user.yml
-dbt_fintech/profiles.yml
 
-# Streamlit local secrets
-.streamlit/secrets.toml
+# Airflow runtime files
+airflow/logs/
+airflow/plugins/__pycache__/
 
-# temporary backups
-*_backup.py.env.mixpanel
-!airflow/.env.airflow.example
-.tmp_dagster_home_*/
+# Dagster runtime files
 .tmp_dagster_home*/
 dagster_home/
-.env
-*.env
-airflow/logs/
-airflow/.env.airflow
-__pycache__/
-*.pyc
-.tmp_dagster_home*/
+storage/
+history/
 
-**/.env
-airflow/.env
+# Temporary backups
+*.bak
+*.broken.*
+*_backup.py
