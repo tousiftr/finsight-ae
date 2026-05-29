@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FinSight Analytics dashboard hub for Apache Superset BI and Mixpanel product analytics.">
+  <title>FinSight Analytics | Dashboards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;650;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav container" aria-label="Primary navigation">
+      <a class="brand" href="/">
+        <span class="brand-mark">FS</span>
+        <span>FinSight Analytics</span>
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/dashboards.html">Dashboards</a>
+        <a href="/architecture.html">Architecture</a>
+        <a href="https://dbt-finsight.iamrad.info/#!/overview" target="_blank" rel="noopener noreferrer">dbt Docs</a>
+        <a href="https://github.com/tousiftr/finsight-ae" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <p class="eyebrow">Dashboard hub</p>
+        <h1>FinSight dashboards and product analytics.</h1>
+        <p class="lede">Two focused entry points for reviewing the public BI layer and product analytics workspace behind the FinSight Analytics project.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3" target="_blank" rel="noopener noreferrer">Open Superset Dashboard</a>
+          <a class="button" href="https://mixpanel.com/p/BoVw6wJRG16YHd8vYgFqap" target="_blank" rel="noopener noreferrer">Open Mixpanel</a>
+          <a class="button subtle" href="/">Back to case study</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="dashboards-title">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Live analytics surfaces</p>
+            <h2 id="dashboards-title">BI reporting and event analytics.</h2>
+            <p>Each card opens the corresponding external analytics tool in a new tab.</p>
+          </div>
+        </div>
+        <div class="dashboard-grid">
+          <article class="dashboard-card">
+            <!-- TODO: Replace placeholder with actual Superset dashboard screenshot when available. -->
+            <div class="screenshot-frame large" aria-label="Superset dashboard screenshot placeholder">
+              <div class="placeholder-ui">
+                <span class="placeholder-bar"></span>
+                <span class="placeholder-row"></span>
+                <span class="placeholder-row short"></span>
+                <div class="placeholder-grid"><span class="placeholder-chip"></span><span class="placeholder-chip"></span><span class="placeholder-chip"></span></div>
+                <span class="placeholder-row"></span>
+              </div>
+            </div>
+            <span class="tag live">Public BI</span>
+            <h3>Apache Superset Dashboard</h3>
+            <p>Public BI dashboard for transaction, finance, customer, product, and pipeline KPIs.</p>
+            <div class="card-actions">
+              <a class="button primary" href="https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3" target="_blank" rel="noopener noreferrer">Open Superset Dashboard</a>
+            </div>
+          </article>
+
+          <article class="dashboard-card">
+            <!-- TODO: Replace placeholder with actual Mixpanel product analytics screenshot when available. -->
+            <div class="screenshot-frame large" aria-label="Mixpanel product analytics screenshot placeholder">
+              <div class="placeholder-ui">
+                <span class="placeholder-bar"></span>
+                <div class="placeholder-grid"><span class="placeholder-chip"></span><span class="placeholder-chip"></span><span class="placeholder-chip"></span></div>
+                <span class="placeholder-row"></span>
+                <span class="placeholder-row short"></span>
+              </div>
+            </div>
+            <span class="tag">Product Analytics</span>
+            <h3>Mixpanel Product Analytics</h3>
+            <p>Product analytics workspace for event tracking, activation, engagement, and behavioral analysis.</p>
+            <div class="card-actions">
+              <a class="button primary" href="https://mixpanel.com/p/BoVw6wJRG16YHd8vYgFqap" target="_blank" rel="noopener noreferrer">Open Mixpanel</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>FinSight Analytics by Tousif Rad</span>
+      <span><a href="/">Home</a> · <a href="/architecture.html">Architecture</a> · <a href="https://github.com/tousiftr/finsight-ae" target="_blank" rel="noopener noreferrer">GitHub</a></span>
+    </div>
+  </footer>
+</body>
+</html>

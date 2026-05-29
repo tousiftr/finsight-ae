@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FinSight Analytics architecture overview for the static portfolio case study.">
+  <title>FinSight Analytics | Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;650;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav container" aria-label="Primary navigation">
+      <a class="brand" href="/">
+        <span class="brand-mark">FS</span>
+        <span>FinSight Analytics</span>
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/dashboards.html">Dashboards</a>
+        <a href="/architecture.html">Architecture</a>
+        <a href="https://dbt-finsight.iamrad.info/#!/overview" target="_blank" rel="noopener noreferrer">dbt Docs</a>
+        <a href="https://github.com/tousiftr/finsight-ae" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <p class="eyebrow">Architecture</p>
+        <h1>Pipeline architecture at a glance.</h1>
+        <p class="lede">A concise static architecture page that keeps the production architecture URL available while the landing page points directly to the deployed architecture route.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="https://dbt-finsight.iamrad.info/#!/overview" target="_blank" rel="noopener noreferrer">Open dbt Docs</a>
+          <a class="button" href="/dashboards.html">Open dashboard hub</a>
+          <a class="button subtle" href="https://github.com/tousiftr/finsight-ae" target="_blank" rel="noopener noreferrer">View source</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="architecture-title">
+      <div class="container case-study">
+        <div class="flow-card">
+          <p class="eyebrow">System flow</p>
+          <h2 id="architecture-title">Generate → Load → Model → Activate.</h2>
+          <p class="lede">FinSight simulates a fintech product analytics and finance reporting platform from synthetic source events through BI and behavioral analytics surfaces.</p>
+        </div>
+        <div class="flow-card">
+          <ul class="flow-list">
+            <li><strong>1. Synthetic sources</strong><span>Python generates customers, accounts, transactions, product events, KYC, campaign, risk, and market data.</span></li>
+            <li><strong>2. Raw ingestion</strong><span>Scheduled GitHub Actions load generated data into raw storage and Neon Postgres.</span></li>
+            <li><strong>3. dbt transformation</strong><span>Staging, intermediate, marts, snapshots, seeds, tests, and docs create trusted analytics models.</span></li>
+            <li><strong>4. Analytics activation</strong><span>Superset serves public KPI reporting, while Mixpanel supports product behavior analysis.</span></li>
+            <li><strong>5. Operations</strong><span>GitHub Actions, Airflow, and Dagster demonstrate scheduling, lineage, and observability patterns.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>FinSight Analytics by Tousif Rad</span>
+      <span><a href="/">Home</a> · <a href="/dashboards.html">Dashboards</a> · <a href="https://github.com/tousiftr/finsight-ae" target="_blank" rel="noopener noreferrer">GitHub</a></span>
+    </div>
+  </footer>
+</body>
+</html>

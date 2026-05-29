@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FinSight Analytics is a live fintech analytics engineering portfolio project with generated data, dbt models, dashboards, product analytics, and orchestration.">
+  <title>FinSight Analytics | Portfolio Case Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;650;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav container" aria-label="Primary navigation">
+      <a class="brand" href="/">
+        <span class="brand-mark">FS</span>
+        <span>FinSight Analytics</span>
+      </a>
+      <div class="nav-links">
+        <a href="#platform">Platform</a>
+        <a href="/dashboards.html">Dashboards</a>
+        <a href="/architecture.html">Architecture</a>
+        <a href="https://dbt-finsight.iamrad.info/#!/overview" target="_blank" rel="noopener noreferrer">dbt Docs</a>
+        <a href="https://github.com/tousiftr/finsight-ae" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <p class="eyebrow">Live fintech analytics engineering platform</p>
+          <h1>FinSight Analytics portfolio case study.</h1>
+          <p class="lede">A clean, recruiter-friendly walkthrough of synthetic fintech data generation, dbt transformations, governed KPI marts, BI dashboards, product analytics, and orchestration tooling.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="https://finsight.iamrad.info/architecture.html" target="_blank" rel="noopener noreferrer">View pipeline architecture</a>
+            <a class="button" href="/dashboards.html">Open dashboard</a>
+            <a class="button subtle" href="https://github.com/tousiftr/finsight-ae" target="_blank" rel="noopener noreferrer">View source</a>
+          </div>
+        </div>
+        <aside class="hero-panel" aria-label="FinSight project summary">
+          <div>
+            <span class="panel-title">Project Snapshot</span>
+            <div class="metric-grid">
+              <div class="metric"><strong>20m</strong><span>Live ingest cadence</span></div>
+              <div class="metric"><strong>dbt</strong><span>Staging to marts</span></div>
+              <div class="metric"><strong>BI</strong><span>Superset dashboard</span></div>
+              <div class="metric"><strong>PX</strong><span>Mixpanel analytics</span></div>
+            </div>
+          </div>
+          <div class="pipeline-strip" aria-label="Pipeline summary">
+            <div class="pipeline-step"><span class="step-dot"></span>Generate synthetic fintech events</div>
+            <div class="pipeline-step"><span class="step-dot"></span>Load raw data to Neon Postgres</div>
+            <div class="pipeline-step"><span class="step-dot"></span>Build dbt models and tests</div>
+            <div class="pipeline-step"><span class="step-dot"></span>Activate dashboards and analytics</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="quick-links-title">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Project navigation</p>
+            <h2 id="quick-links-title">Fast paths for reviewers.</h2>
+            <p>Shortcuts to the project pages recruiters and analytics leaders are most likely to inspect first.</p>
+          </div>
+        </div>
+        <div class="quick-nav">
+          <a class="card" href="/dashboards.html">
+            <span class="tag live">Dashboards</span>
+            <h3>Superset + Mixpanel</h3>
+            <p>Open the internal dashboard hub.</p>
+          </a>
+          <a class="card" href="/architecture.html">
+            <span class="tag">Architecture</span>
+            <h3>Pipeline design</h3>
+            <p>Review system design and data flow.</p>
+          </a>
+          <a class="card" href="https://dbt-finsight.iamrad.info/#!/overview" target="_blank" rel="noopener noreferrer">
+            <span class="tag">dbt Docs</span>
+            <h3>Model docs</h3>
+            <p>Open live dbt documentation and lineage.</p>
+          </a>
+          <a class="card" href="https://github.com/tousiftr/finsight-ae" target="_blank" rel="noopener noreferrer">
+            <span class="tag">GitHub</span>
+            <h3>Source repo</h3>
+            <p>Inspect code, workflows, and project structure.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="platform" aria-labelledby="platform-title">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Explore the platform</p>
+            <h2 id="platform-title">Small clickable cards for each tool.</h2>
+            <p>Every card links directly to the relevant live tool, portfolio page, or repository section.</p>
+          </div>
+        </div>
+        <div class="platform-grid">
+          <a class="platform-card" href="https://github.com/tousiftr/finsight-ae/actions" target="_blank" rel="noopener noreferrer"><div class="card-topline"><span class="tag">GitHub Actions</span><span class="arrow">↗</span></div><h3>Data Generated</h3><p>Synthetic fintech data generated through scheduled GitHub Actions.</p></a>
+          <a class="platform-card" href="https://dbt-finsight.iamrad.info/#!/overview" target="_blank" rel="noopener noreferrer"><div class="card-topline"><span class="tag">dbt Docs</span><span class="arrow">↗</span></div><h3>Transform &amp; Model</h3><p>dbt models, tests, documentation, and lineage-ready transformations.</p></a>
+          <a class="platform-card" href="https://github.com/tousiftr/finsight-ae/tree/main/dbt_fintech" target="_blank" rel="noopener noreferrer"><div class="card-topline"><span class="tag">GitHub</span><span class="arrow">↗</span></div><h3>dbt Project</h3><p>dbt_fintech models, staging, intermediate, marts, tests, and docs.</p></a>
+          <a class="platform-card" href="https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3" target="_blank" rel="noopener noreferrer"><div class="card-topline"><span class="tag live">Live Dashboard</span><span class="arrow">↗</span></div><h3>Apache Superset</h3><p>Public recruiter dashboard for FinSight transaction and KPI reporting.</p></a>
+          <a class="platform-card" href="https://mixpanel.com/p/BoVw6wJRG16YHd8vYgFqap" target="_blank" rel="noopener noreferrer"><div class="card-topline"><span class="tag">Product Analytics</span><span class="arrow">↗</span></div><h3>Mixpanel</h3><p>Product analytics event tracking and behavioral analytics.</p></a>
+          <a class="platform-card" href="https://iamrad.info/" target="_blank" rel="noopener noreferrer"><div class="card-topline"><span class="tag">Portfolio</span><span class="arrow">↗</span></div><h3>Portfolio Landing Page</h3><p>Main analytics engineering portfolio and project navigation.</p></a>
+          <a class="platform-card" href="https://github.com/tousiftr/finsight-ae/actions" target="_blank" rel="noopener noreferrer"><div class="card-topline"><span class="tag">Automation</span><span class="arrow">↗</span></div><h3>GitHub Actions Data Engineering Pipeline</h3><p>Scheduled data generation, ingestion, dbt build, and deployment workflow.</p></a>
+          <a class="platform-card" href="https://airflow.iamrad.info/" target="_blank" rel="noopener noreferrer"><div class="card-topline"><span class="tag protected">Protected</span><span class="arrow">↗</span></div><h3>Airflow</h3><p>Private orchestration layer for DAG scheduling and operational learning.</p></a>
+          <a class="platform-card" href="https://dagster.iamrad.info/" target="_blank" rel="noopener noreferrer"><div class="card-topline"><span class="tag protected">Protected</span><span class="arrow">↗</span></div><h3>Dagster</h3><p>Private dbt asset lineage, materialization history, and orchestration view.</p></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="operations" aria-labelledby="operations-title">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Orchestration &amp; Operations</p>
+            <h2 id="operations-title">Scheduling, validation, lineage, deployment, and observability.</h2>
+            <p>Scheduling, validation, lineage, deployment, and observability across GitHub Actions, Airflow, Dagster, dbt, and Superset.</p>
+          </div>
+        </div>
+        <div class="operations-grid">
+          <a class="card" href="https://github.com/tousiftr/finsight-ae/actions" target="_blank" rel="noopener noreferrer"><span class="tag">GitHub Actions</span><h3>GitHub Actions</h3><p>Scheduled cloud automation for ingestion, dbt builds, and deployment.</p></a>
+          <a class="card" href="https://airflow.iamrad.info/" target="_blank" rel="noopener noreferrer"><span class="tag protected">Protected</span><h3>Airflow</h3><p>Private DAG orchestration for production-style scheduling and task-level observability.</p></a>
+          <a class="card" href="https://dagster.iamrad.info/" target="_blank" rel="noopener noreferrer"><span class="tag protected">Protected</span><h3>Dagster</h3><p>Private asset lineage and dbt materialization history for model observability.</p></a>
+          <a class="card" href="https://dbt-finsight.iamrad.info/#!/overview" target="_blank" rel="noopener noreferrer"><span class="tag">dbt Docs</span><h3>dbt Tests</h3><p>Data quality checks for not-null, unique, relationships, accepted values, and business rules.</p></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="screenshots" aria-labelledby="screenshots-title">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Screenshots</p>
+            <h2 id="screenshots-title">Gallery placeholders for live platform evidence.</h2>
+            <p>Polished placeholders are included until production screenshots are added to the repository.</p>
+          </div>
+          <a class="button" href="/dashboards.html">View dashboard page</a>
+        </div>
+        <div class="screenshot-grid">
+          <!-- TODO: Replace placeholder with actual Superset dashboard screenshot when available. -->
+          <a class="screenshot-card" href="https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3" target="_blank" rel="noopener noreferrer"><div class="screenshot-frame"><div class="placeholder-ui"><span class="placeholder-bar"></span><span class="placeholder-row"></span><span class="placeholder-row short"></span><div class="placeholder-grid"><span class="placeholder-chip"></span><span class="placeholder-chip"></span><span class="placeholder-chip"></span></div></div></div><span class="tag live">Superset</span><h3>Superset dashboard</h3><p>Public KPI dashboard for finance, customer, product, and pipeline reporting.</p></a>
+          <!-- TODO: Replace placeholder with actual dbt Docs screenshot when available. -->
+          <a class="screenshot-card" href="https://dbt-finsight.iamrad.info/#!/overview" target="_blank" rel="noopener noreferrer"><div class="screenshot-frame"><div class="placeholder-ui"><span class="placeholder-bar"></span><span class="placeholder-row"></span><span class="placeholder-row"></span><span class="placeholder-row short"></span></div></div><span class="tag">dbt Docs</span><h3>dbt docs</h3><p>Documentation and lineage-ready model catalog for the dbt_fintech project.</p></a>
+          <!-- TODO: Replace placeholder with actual Dagster lineage screenshot when available. -->
+          <a class="screenshot-card" href="https://dagster.iamrad.info/" target="_blank" rel="noopener noreferrer"><div class="screenshot-frame"><div class="placeholder-ui"><span class="placeholder-bar"></span><div class="placeholder-grid"><span class="placeholder-chip"></span><span class="placeholder-chip"></span><span class="placeholder-chip"></span></div><span class="placeholder-row"></span></div></div><span class="tag protected">Protected</span><h3>Dagster lineage</h3><p>Private asset lineage and dbt materialization history.</p></a>
+          <!-- TODO: Replace placeholder with actual Airflow DAG screenshot when available. -->
+          <a class="screenshot-card" href="https://airflow.iamrad.info/" target="_blank" rel="noopener noreferrer"><div class="screenshot-frame"><div class="placeholder-ui"><span class="placeholder-bar"></span><span class="placeholder-row"></span><span class="placeholder-row"></span><span class="placeholder-row short"></span></div></div><span class="tag protected">Protected</span><h3>Airflow DAG</h3><p>Private DAG scheduling and operational task monitoring.</p></a>
+          <!-- TODO: Replace placeholder with actual GitHub Actions run screenshot when available. -->
+          <a class="screenshot-card" href="https://github.com/tousiftr/finsight-ae/actions" target="_blank" rel="noopener noreferrer"><div class="screenshot-frame"><div class="placeholder-ui"><span class="placeholder-bar"></span><span class="placeholder-row"></span><span class="placeholder-row short"></span><div class="placeholder-grid"><span class="placeholder-chip"></span><span class="placeholder-chip"></span><span class="placeholder-chip"></span></div></div></div><span class="tag">Automation</span><h3>GitHub Actions run</h3><p>Scheduled ingestion, dbt validation, and deployment workflow runs.</p></a>
+          <!-- TODO: Replace placeholder with actual Mixpanel event analytics screenshot when available. -->
+          <a class="screenshot-card" href="https://mixpanel.com/p/BoVw6wJRG16YHd8vYgFqap" target="_blank" rel="noopener noreferrer"><div class="screenshot-frame"><div class="placeholder-ui"><span class="placeholder-bar"></span><div class="placeholder-grid"><span class="placeholder-chip"></span><span class="placeholder-chip"></span><span class="placeholder-chip"></span></div><span class="placeholder-row"></span></div></div><span class="tag">Product Analytics</span><h3>Mixpanel event analytics</h3><p>Behavioral analytics workspace for activation, engagement, and retention.</p></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="stack" aria-labelledby="stack-title">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Tech Stack</p>
+            <h2 id="stack-title">Static case study, live engineering stack.</h2>
+          </div>
+        </div>
+        <div class="stack-grid">
+          <div class="card"><span class="tag">Generate</span><h3>Python + Faker</h3><p>Customers, accounts, transactions, events, KYC, campaigns, fraud alerts, and market data.</p></div>
+          <div class="card"><span class="tag">Store</span><h3>R2 + Neon</h3><p>Cloud object storage patterns and Postgres raw warehouse loading.</p></div>
+          <div class="card"><span class="tag">Model</span><h3>dbt Core</h3><p>Staging, intermediate, mart, snapshot, seed, and testing layers.</p></div>
+          <div class="card"><span class="tag">Activate</span><h3>Superset + Mixpanel</h3><p>BI reporting and product analytics for recruiter-facing project review.</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>FinSight Analytics by Tousif Rad</span>
+      <span><a href="https://iamrad.info/" target="_blank" rel="noopener noreferrer">Main Portfolio</a> · <a href="https://github.com/tousiftr/finsight-ae" target="_blank" rel="noopener noreferrer">GitHub</a> · <a href="/architecture.html">Architecture</a></span>
+    </div>
+  </footer>
+</body>
+</html>
