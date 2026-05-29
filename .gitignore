@@ -11,6 +11,7 @@ dbt_fintech/profiles.yml
 
 # Keep example env files safe to commit
 !.env.example
+!.env.*.example
 !*.env.example
 !dbt_fintech/profiles.yml.example
 
