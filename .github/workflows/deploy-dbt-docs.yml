@@ -93,10 +93,12 @@ jobs:
       - name: Generate dbt docs
         working-directory: dbt_fintech
         run: dbt docs generate --target dev
-
-      - name: Add GitHub Pages marker
-        run: touch dbt_fintech/target/.nojekyll
-
+      
+      - name: Add GitHub Pages markers
+        run: |
+          touch dbt_fintech/target/.nojekyll
+          echo "dbt-finsight.iamrad.info" > dbt_fintech/target/CNAME
+ 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
@@ -108,3 +110,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+ 
