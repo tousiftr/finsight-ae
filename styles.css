@@ -457,6 +457,120 @@ h3 {
   font-size: 0.93rem;
 }
 
+.pipeline-case {
+  padding-top: 28px;
+}
+
+.pipeline-case-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.pipeline-case-copy p:not(.eyebrow) {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 1.04rem;
+}
+
+.pipeline-logo-card {
+  display: flex;
+  align-items: center;
+}
+
+.pipeline-logo-strip {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pipeline-logo {
+  display: grid;
+  min-height: 132px;
+  margin: 0;
+  padding: 16px 10px 14px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface-soft);
+}
+
+.pipeline-logo-mark {
+  width: 58px;
+  height: 58px;
+  padding: 10px;
+  border-radius: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.pipeline-logo-mark circle,
+.pipeline-logo-mark rect {
+  fill: currentColor;
+  stroke: none;
+}
+
+.pipeline-logo-mark path {
+  fill: none;
+}
+
+.github-mark {
+  color: #111827;
+}
+
+.github-mark circle {
+  fill: #111827;
+}
+
+.github-mark path {
+  fill: #fff;
+  stroke: none;
+}
+
+.neon-mark {
+  color: #00e599;
+}
+
+.dbt-mark {
+  color: #ff694b;
+}
+
+.superset-mark {
+  color: #2563eb;
+}
+
+.mixpanel-mark {
+  color: #7c3aed;
+}
+
+.pipeline-logo figcaption {
+  display: grid;
+  gap: 2px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+.pipeline-logo figcaption span {
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+
+.pipeline-logo figcaption strong {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
 .screenshot-frame {
   display: flex;
   overflow: hidden;
@@ -543,6 +657,7 @@ h3 {
 @media (max-width: 920px) {
   .hero-grid,
   .case-study,
+  .pipeline-case-grid,
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -553,6 +668,10 @@ h3 {
   .stack-grid,
   .quick-nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pipeline-logo-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -585,7 +704,8 @@ h3 {
   .screenshot-grid,
   .stack-grid,
   .quick-nav,
-  .metric-grid {
+  .metric-grid,
+  .pipeline-logo-strip {
     grid-template-columns: 1fr;
   }
 
