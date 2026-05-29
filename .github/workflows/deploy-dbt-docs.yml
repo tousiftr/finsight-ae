@@ -27,13 +27,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     env:
-      DBT_PROFILES_DIR: ${{ runner.temp }}/dbt_profiles
       DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
       DBT_PG_PORT: ${{ secrets.DBT_PG_PORT }}
       DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
       DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
       DBT_PG_DATABASE: ${{ secrets.DBT_PG_DATABASE }}
-      DBT_PG_SCHEMA: ${{ secrets.DBT_PG_SCHEMA != '' && secrets.DBT_PG_SCHEMA || 'dbt_fs' }}
+      DBT_PG_SCHEMA: ${{ secrets.DBT_PG_SCHEMA || 'dbt_fs' }}
 
     steps:
       - name: Checkout repository
@@ -63,8 +62,9 @@ jobs:
 
       - name: Create temporary dbt profile
         run: |
-          mkdir -p "$DBT_PROFILES_DIR"
-          cat > "$DBT_PROFILES_DIR/profiles.yml" <<'YAML'
+          DBT_PROFILE_DIR="$RUNNER_TEMP/dbt_profiles"
+          mkdir -p "$DBT_PROFILE_DIR"
+          cat > "$DBT_PROFILE_DIR/profiles.yml" <<'YAML'
           finsight_fintech:
             target: dev
             outputs:
@@ -79,7 +79,8 @@ jobs:
                 threads: 4
                 sslmode: require
           YAML
-          chmod 600 "$DBT_PROFILES_DIR/profiles.yml"
+          chmod 600 "$DBT_PROFILE_DIR/profiles.yml"
+          echo "DBT_PROFILES_DIR=$DBT_PROFILE_DIR" >> "$GITHUB_ENV"
 
       - name: Install dbt packages
         working-directory: dbt_fintech
