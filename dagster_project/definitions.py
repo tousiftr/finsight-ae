@@ -33,15 +33,15 @@ def get_optional_env(name: str, default: Optional[str] = None) -> Optional[str]:
 
 
 def dbt_project_dir() -> Path:
-    return Path(get_env("DBT_PROJECT_DIR", "/opt/finsight-ae/dbt_fintech")).resolve()
+    return Path(get_env("DBT_PROJECT_DIR", "/opt/finsight-dagster/dbt_fintech")).resolve()
 
 
 def dbt_profiles_dir() -> Path:
-    return Path(get_env("DBT_PROFILES_DIR", "/opt/finsight-ae/dbt_fintech")).resolve()
+    return Path(get_env("DBT_PROFILES_DIR", "/home/rad/.dbt")).resolve()
 
 
 def dbt_target() -> Optional[str]:
-    return get_optional_env("DBT_TARGET", "prod")
+    return get_optional_env("DBT_TARGET", "dev")
 
 
 # ---------------------------------------------------------------------
@@ -182,7 +182,7 @@ def run_dbt_mart_models(context, checks: dict) -> None:
         command_label="dbt mart daily build",
         dbt_args=["build"],
         selector_env="DBT_MART_SELECTOR",
-        default_selector="path:models/marts",
+        default_selector="path:models/mart",
     )
 
 
@@ -339,7 +339,7 @@ source .venv/bin/activate
 set -a
 source .env
 set +a
-dbt source freshness --project-dir /opt/finsight-ae/dbt_fintech --profiles-dir /opt/finsight-ae/dbt_fintech --target prod
+dbt source freshness --project-dir /opt/finsight-dagster/dbt_fintech --profiles-dir /home/rad/.dbt --target dev
 """.strip()
 
 

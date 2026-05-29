@@ -5,6 +5,6 @@ Write-Host "Running dbt current analytics slice..."
 docker run --rm `
   --env-file .env.dbt `
   -v "${PWD}/dbt_fintech:/usr/app" `
-  finsight-dbt:local build --profiles-dir . --select staging int_transactions_enriched fct_transactions mrt_finance_daily_transactions mrt_finance_daily_kpis mrt_customer_account_summary
+  finsight-dbt:local build --profiles-dir . --select path:models/staging path:models/intermediate path:models/mart/report
 
 Write-Host "dbt build completed successfully."
