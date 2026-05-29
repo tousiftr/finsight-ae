@@ -5,14 +5,14 @@ x-superset-env: &superset-env
   SUPERSET_LOAD_EXAMPLES: "no"
   SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:?Set SUPERSET_SECRET_KEY in your local .env file}
   SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
-  SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME:-admin}
-  SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-admin}
-  SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-admin@finsight.local}
+  SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME:?Set SUPERSET_ADMIN_USERNAME in your local .env file}
+  SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:?Set SUPERSET_ADMIN_PASSWORD in your local .env file}
+  SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:?Set SUPERSET_ADMIN_EMAIL in your local .env file}
   SUPERSET_METADATA_DB_HOST: superset-db
   SUPERSET_METADATA_DB_PORT: 5432
   SUPERSET_METADATA_DB_NAME: ${SUPERSET_METADATA_DB_NAME:-superset}
   SUPERSET_METADATA_DB_USER: ${SUPERSET_METADATA_DB_USER:-superset}
-  SUPERSET_METADATA_DB_PASSWORD: ${SUPERSET_METADATA_DB_PASSWORD:-superset}
+  SUPERSET_METADATA_DB_PASSWORD: ${SUPERSET_METADATA_DB_PASSWORD:?Set SUPERSET_METADATA_DB_PASSWORD in your local .env file}
   REDIS_HOST: superset-redis
   REDIS_PORT: 6379
 
@@ -23,7 +23,7 @@ services:
     environment:
       POSTGRES_DB: ${SUPERSET_METADATA_DB_NAME:-superset}
       POSTGRES_USER: ${SUPERSET_METADATA_DB_USER:-superset}
-      POSTGRES_PASSWORD: ${SUPERSET_METADATA_DB_PASSWORD:-superset}
+      POSTGRES_PASSWORD: ${SUPERSET_METADATA_DB_PASSWORD:?Set SUPERSET_METADATA_DB_PASSWORD in your local .env file}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -82,7 +82,7 @@ services:
     environment:
       <<: *superset-env
     ports:
-      - "${SUPERSET_PORT:-8088}:8088"
+      - "127.0.0.1:${SUPERSET_PORT:-8088}:8088"
     volumes:
       - superset_home:/app/superset_home
       - ./superset/config:/app/pythonpath:ro

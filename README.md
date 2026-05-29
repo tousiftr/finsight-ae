@@ -9,7 +9,7 @@ The platform now includes GitHub Actions, Python generators/loaders, Cloudflare 
 - Airflow and Dagster are both implemented on VM infrastructure and are actively used for orchestration.
 - Mixpanel Import API integration is working and successfully imported 100 product events with HTTP 200.
 - Email alerting has been created for orchestration monitoring in both Airflow and Dagster contexts.
-- Airflow Gmail SMTP alert test succeeded, including a test email to `aefinsight@yahoo.com`, and logs confirmed: `Sent an alert email`.
+- Airflow Gmail SMTP alert test succeeded using a private recipient configured outside the repository, and logs confirmed: `Sent an alert email`.
 - VM-hosted orchestration services are fronted by Caddy reverse proxy with protected access controls.
 
 ## What is working now
@@ -115,6 +115,12 @@ Caddy
 - No Mixpanel secrets are committed.
 - No SMTP credentials are committed.
 - UI access is protected with Basic Auth where applicable.
+
+## Public repo security
+- This public repository uses example environment files only; real credentials must never be committed.
+- Store real credentials in local `.env` files, GitHub Secrets, Airflow connections, or VM-only configuration.
+- Never commit `dbt_fintech/profiles.yml`, `airflow/.env`, `airflow/.env.airflow`, `.streamlit/secrets.toml`, private keys, or production Caddy config.
+- Run gitleaks before merging public PRs, and treat any finding as a release blocker until it is remediated.
 
 ## Repository structure
 ```text

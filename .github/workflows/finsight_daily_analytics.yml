@@ -3,6 +3,9 @@ name: FinSight Manual Marts
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: finsight-manual-marts
   cancel-in-progress: false

@@ -6,6 +6,9 @@ on:
     # 09:00 and 21:00 Bangladesh time (UTC+06:00)
     - cron: "0 3,15 * * *"
 
+permissions:
+  contents: read
+
 concurrency:
   group: finsight-daily-intermediate
   cancel-in-progress: false

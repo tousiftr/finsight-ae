@@ -12,7 +12,7 @@ from airflow.operators.python import PythonOperator
 DEFAULT_ARGS = {
     "owner": "rad",
     "depends_on_past": False,
-    "email": ["aefinsight@yahoo.com"],
+    "email": [os.getenv("AIRFLOW_ALERT_EMAIL", "alerts@example.invalid")],
     "email_on_failure": True,
     "email_on_retry": True,
     "retries": 1,

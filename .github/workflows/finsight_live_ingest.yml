@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: "*/20 * * * *"
 
+permissions:
+  contents: read
+
 concurrency:
   group: finsight-live-ingest
   cancel-in-progress: false

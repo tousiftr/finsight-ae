@@ -47,3 +47,34 @@ history/
 *.bak
 *.broken.*
 *_backup.py
+
+# Private keys and certificates
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+*.pub
+
+# Cloud and infra credentials
+.aws/
+.gcloud/
+.azure/
+.kube/
+terraform.tfstate
+terraform.tfstate.*
+*.tfvars
+*.tfvars.json
+
+# Local databases and exports
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.backup
+
+# Logs and generated reports that may contain env values
+*.log
+logs/
