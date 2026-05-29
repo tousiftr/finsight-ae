@@ -20,7 +20,7 @@ def dbt_intermediate_daily():
 
 @asset
 def dbt_marts_2hour():
-    run_dbt(["dbt", "build", "--select", "mrt_*"])
+    run_dbt(["dbt", "build", "--select", "path:models/mart"])
 
 
 intermediate_daily_schedule = ScheduleDefinition(
