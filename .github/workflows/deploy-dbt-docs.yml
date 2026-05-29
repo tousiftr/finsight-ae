@@ -1,0 +1,109 @@
+name: Deploy dbt Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "dbt_fintech/**"
+      - ".github/workflows/deploy-dbt-docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  generate-and-deploy:
+    name: Generate and deploy dbt docs
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    env:
+      DBT_PROFILES_DIR: ${{ runner.temp }}/dbt_profiles
+      DBT_PG_HOST: ${{ secrets.DBT_PG_HOST }}
+      DBT_PG_PORT: ${{ secrets.DBT_PG_PORT }}
+      DBT_PG_USER: ${{ secrets.DBT_PG_USER }}
+      DBT_PG_PASSWORD: ${{ secrets.DBT_PG_PASSWORD }}
+      DBT_PG_DATABASE: ${{ secrets.DBT_PG_DATABASE }}
+      DBT_PG_SCHEMA: ${{ secrets.DBT_PG_SCHEMA != '' && secrets.DBT_PG_SCHEMA || 'dbt_fs' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dbt dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install dbt-postgres
+
+      - name: Validate required dbt secrets
+        run: |
+          missing=0
+          for name in DBT_PG_HOST DBT_PG_PORT DBT_PG_USER DBT_PG_PASSWORD DBT_PG_DATABASE; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required GitHub Secret: $name" >&2
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Create temporary dbt profile
+        run: |
+          mkdir -p "$DBT_PROFILES_DIR"
+          cat > "$DBT_PROFILES_DIR/profiles.yml" <<'YAML'
+          finsight_fintech:
+            target: dev
+            outputs:
+              dev:
+                type: postgres
+                host: "{{ env_var('DBT_PG_HOST') }}"
+                port: "{{ env_var('DBT_PG_PORT') | int }}"
+                user: "{{ env_var('DBT_PG_USER') }}"
+                password: "{{ env_var('DBT_PG_PASSWORD') }}"
+                dbname: "{{ env_var('DBT_PG_DATABASE') }}"
+                schema: "{{ env_var('DBT_PG_SCHEMA', 'dbt_fs') }}"
+                threads: 4
+                sslmode: require
+          YAML
+          chmod 600 "$DBT_PROFILES_DIR/profiles.yml"
+
+      - name: Install dbt packages
+        working-directory: dbt_fintech
+        run: dbt deps
+
+      - name: Validate dbt connection
+        working-directory: dbt_fintech
+        run: dbt debug --target dev
+
+      - name: Generate dbt docs
+        working-directory: dbt_fintech
+        run: dbt docs generate --target dev
+
+      - name: Add GitHub Pages marker
+        run: touch dbt_fintech/target/.nojekyll
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload dbt docs artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dbt_fintech/target
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
