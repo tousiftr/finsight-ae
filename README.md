@@ -1,153 +1,231 @@
-# FinSight Analytics
+# FinSight Analytics: Live Fintech Analytics Engineering Platform
 
-## Project overview
-**FinSight Analytics: Live Fintech Analytics Engineering Platform** is a portfolio-grade analytics engineering project for a synthetic fintech company. It simulates customers, accounts, merchants, transactions, and product event data, then operationalizes that data across ingestion, transformation, orchestration, and activation workflows.
+A portfolio analytics engineering platform simulating fintech transactions, onboarding, product usage, growth, risk, and pipeline health using Python, Cloudflare R2, Neon Postgres, dbt, Superset, Mixpanel, Airflow, Dagster, and GitHub Actions.
 
-The platform now includes GitHub Actions, Python generators/loaders, Cloudflare R2, Neon Postgres, dbt, Airflow, Dagster, Mixpanel, Caddy, and orchestration email alerting.
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![dbt](https://img.shields.io/badge/dbt-Core-FF694B?logo=dbt&logoColor=white)](https://www.getdbt.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql&logoColor=white)](https://neon.tech/)
+[![Superset](https://img.shields.io/badge/Apache-Superset-20A6C9?logo=apache-superset&logoColor=white)](https://superset.apache.org/)
+[![Airflow](https://img.shields.io/badge/Apache-Airflow-017CEE?logo=apache-airflow&logoColor=white)](https://airflow.apache.org/)
+[![Dagster](https://img.shields.io/badge/Dagster-Lineage-654FF0)](https://dagster.io/)
+[![GitHub Actions](https://img.shields.io/badge/GitHub-Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/tousiftr/finsight-ae/actions)
+[![Portfolio Live](https://img.shields.io/badge/Portfolio-Live-16A34A)](https://finsight.iamrad.info/)
 
-## Latest milestone
-- Airflow and Dagster are both implemented on VM infrastructure and are actively used for orchestration.
-- Mixpanel Import API integration is working and successfully imported 100 product events with HTTP 200.
-- Email alerting has been created for orchestration monitoring in both Airflow and Dagster contexts.
-- Airflow Gmail SMTP alert test succeeded, including a test email to `aefinsight@yahoo.com`, and logs confirmed: `Sent an alert email`.
-- VM-hosted orchestration services are fronted by Caddy reverse proxy with protected access controls.
+## Live Project Links
 
-## What is working now
-- [x] GitHub Actions ingestion workflows are active for synthetic data generation and raw loading.
-- [x] Raw fintech batches land in Cloudflare R2.
-- [x] Raw data loads into Neon Postgres `raw` schema.
-- [x] dbt transformations run in `dbt_fs` using staging, intermediate, and reporting layers.
-- [x] dbt source freshness checks, snapshots, model runs, and tests are orchestrated through Dagster.
-- [x] Airflow is running in Docker on VM infrastructure for operational workflows.
-- [x] Airflow Mixpanel sync orchestration is active with retries and logs.
-- [x] Mixpanel product analytics activation is implemented through the Import API.
-- [x] Mixpanel sync outcomes are tracked in `metadata.mixpanel_sync_log`.
-- [x] Dagster UI is hosted at `dagster.iamrad.info` behind Caddy and Basic Auth.
-- [x] Email alerting is configured and tested for orchestration observability.
+| Surface | Link |
+| --- | --- |
+| Project Website | [finsight.iamrad.info](https://finsight.iamrad.info/) |
+| Architecture Page | [finsight.iamrad.info/architecture.html](https://finsight.iamrad.info/architecture.html) |
+| dbt Docs | [dbt-finsight.iamrad.info](https://dbt-finsight.iamrad.info/#!/overview) |
+| Superset Dashboard | [Open the live dashboard](https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3) |
+| Mixpanel Product Analytics | [Open the Mixpanel board](https://mixpanel.com/project/4027714/view/4523900/app/boards/#id=11229807) |
+| Main Portfolio | [iamrad.info](https://iamrad.info) |
+| GitHub Repository | [github.com/tousiftr/finsight-ae](https://github.com/tousiftr/finsight-ae) |
 
-## Current architecture
-```text
-GitHub Actions
-  -> Python synthetic fintech micro-batch generator
-  -> Cloudflare R2 raw landing zone
-  -> Neon Postgres raw schema
-  -> dbt models in dbt_fs
-     -> stg_* views
-     -> int_* truth tables
-     -> mrt_rp_<dept>_<model> reporting views
+## Project Overview
 
-Airflow (VM-hosted, Docker)
-  -> Operational orchestration
-  -> Mixpanel sync workflows
-  -> Retries, logs, email alerts
+FinSight Analytics is a self-built analytics engineering project that simulates a small fintech data platform. It is designed as a practical case study: synthetic source data is generated in Python, landed as raw files, loaded into Neon Postgres, transformed into reporting-ready models with dbt, and exposed through analytics surfaces that are easy to review.
 
-Dagster (VM-hosted)
-  -> dbt orchestration and lineage/asset graph
-  -> Source freshness, snapshots, model runs, tests
-  -> Orchestration observability and alerting
+The platform covers transaction activity, customer and account health, KYC onboarding, product usage, finance metrics, growth, risk, and pipeline health. dbt provides the transformation contract, reusable business models, source freshness checks, snapshots, data tests, documentation, and lineage-ready metadata. Apache Superset serves BI dashboards, while Mixpanel supports product event analysis, funnels, activation, and behavior tracking.
 
-Mixpanel
-  -> Import API activation target for product events
-  -> Sync audit trail in metadata.mixpanel_sync_log
+GitHub Actions runs scheduled automation. Airflow and Dagster add protected orchestration learning surfaces: Airflow is used for operational DAG design, retries, logs, and Mixpanel sync workflows; Dagster is used for dbt-oriented orchestration, lineage, asset graph exploration, and observability. These protected tools are described in the repository without exposing credentials or internal access details.
 
-Caddy
-  -> Reverse proxy, SSL termination, protected service access
+## Architecture Diagram
+
+```mermaid
+flowchart LR
+    GA[GitHub Actions<br/>Scheduled Pipeline Runs] --> GEN[Synthetic Data Generator<br/>Python + Faker]
+    GEN --> R2[Cloudflare R2<br/>S3-compatible Raw Storage]
+    R2 --> RAW[Neon Postgres<br/>Raw Schema]
+    RAW --> STG[dbt Staging Models]
+    STG --> INT[dbt Intermediate Models]
+    INT --> MART[dbt Mart Models]
+    MART --> SUPERSET[Superset Dashboard]
+    SUPERSET --> MIXPANEL[Mixpanel Product Analytics]
+    MIXPANEL --> WEB[Portfolio Website]
+
+    AIRFLOW[Airflow<br/>Protected Orchestration Learning] -. operational DAG design .-> GEN
+    DAGSTER[Dagster<br/>Protected Lineage + Asset Graph Learning] -. dbt asset visibility .-> STG
+    MART --> DBTDOCS[dbt Docs<br/>Documentation + Lineage View]
+    RAW --> META[(Metadata Tables<br/>Pipeline Status + Data Quality Results)]
+    STG --> META
+    META --> SUPERSET
 ```
 
-## Tool responsibilities
-- **GitHub Actions:** Ingestion orchestration and CI/CD-style pipeline automation.
-- **Airflow:** Operational orchestration and Mixpanel sync execution.
-- **Dagster:** dbt orchestration, lineage, asset visibility, and dbt-oriented scheduling.
-- **dbt:** Transformations, tests, and strict modeling/materialization contract.
-- **Neon Postgres:** Analytics warehouse for `raw` and `dbt_fs` schemas.
-- **Cloudflare R2:** Raw object storage and landing zone for ingestion batches.
-- **Mixpanel:** Product analytics activation destination.
-- **Caddy:** Reverse proxy and SSL for VM-hosted UIs/services.
+The primary data path is **generate → land → load → model → activate**. The dashed connections represent protected learning and operational surfaces rather than public endpoints.
 
-## Current workflows
-### GitHub Actions
-- Live ingestion
-- Raw loading
-- dbt source freshness workflow
-- Staging builds
-- Intermediate workflow
-- Mart/reporting workflow
+## What This Project Demonstrates
 
-### Airflow
-- Operational workflows
-- Mixpanel sync
-- Retries, logs, and email alerts
+- End-to-end analytics engineering workflow
+- Synthetic fintech event and transaction generation
+- Raw data landing pattern using S3-compatible storage
+- Cloud warehouse loading into Neon Postgres
+- dbt staging, intermediate, and mart modeling
+- Data quality tests and business rule validation
+- KPI dashboarding in Apache Superset
+- Product analytics tracking in Mixpanel
+- Scheduled automation using GitHub Actions
+- Orchestration practice using Airflow
+- Lineage and asset graph practice using Dagster
+- Portfolio publishing through [iamrad.info](https://iamrad.info)
 
-### Dagster
-- dbt orchestration
-- Lineage and asset graph
-- Source freshness
-- Snapshots
-- Model and test execution
-- Alerting and observability
+## Tech Stack
 
-## dbt modeling contract
-### Schema ownership
+| Layer | Tool | Purpose |
+| --- | --- | --- |
+| Data generation | Python, Faker | Synthetic fintech data |
+| Raw storage | Cloudflare R2 / S3-compatible storage | Raw file landing |
+| Warehouse | Neon Postgres | Cloud analytical database |
+| Transformation | dbt Core | Staging, intermediate, marts, tests, snapshots, and docs |
+| BI | Apache Superset | Executive and operational KPI dashboards |
+| Product analytics | Mixpanel | Event analytics, funnels, and behavior tracking |
+| Automation | GitHub Actions | Scheduled pipeline runs and validation workflows |
+| Orchestration | Airflow | DAG scheduling and operational learning |
+| Lineage | Dagster | Asset graph and dbt lineage learning |
+| Web | HTML/CSS, Caddy, iamrad.info | Portfolio presentation and protected service routing |
+
+## Data Domains
+
+The platform is organized around fintech business and operational domains:
+
+- Customers
+- Accounts
+- Transactions
+- KYC / onboarding
+- Product events
+- Campaigns
+- Campaign touchpoints
+- Fraud alerts
+- Chargebacks
+- FX rates
+- Market prices
+- Pipeline status
+- Data quality results
+
+The current dbt source layer focuses on customers, accounts, merchants, transactions, product events, and KYC applications. The broader list captures the business domain coverage used for portfolio planning and future model expansion.
+
+## dbt Modeling Approach
+
+The dbt project follows a layered modeling pattern so raw ingestion remains separate from analytics logic:
+
+| Layer | Role |
+| --- | --- |
+| Raw sources | Ingestion-owned records loaded into the Neon Postgres `raw` schema |
+| Staging models | Source-cleaned `stg_*` views that standardize raw payloads |
+| Intermediate models | Reusable `int_*` tables for trusted business logic and enriched entities |
+| Mart models | Thin reporting views using the `mrt_rp_<dept>_<model>` naming pattern |
+| Data tests | Source checks, accepted values, non-null rules, freshness checks, and custom business-rule assertions |
+| Documentation | dbt Docs model catalog and transformation visibility |
+
+The dbt models are designed around clean business entities, reusable transformations, KPI reporting, and reliable downstream BI. The repository also includes seeds for controlled reference values and snapshots for customer and transaction history.
+
+### Schema and materialization contract
+
 - `raw` schema: ingestion-owned only
 - `dbt_fs` schema: dbt-owned only
+- Staging models: views
+- Intermediate models: tables
+- Mart/reporting models: views
 
-### Layering and naming
-- `stg_*`: source-cleaned views
-- `int_*`: trusted reusable business truth tables
-- `mrt_rp_<dept>_<model>`: thin reporting/dashboard views
+## Dashboard and Analytics Surfaces
 
-### Materialization contract
-- Staging = `view`
-- Intermediate = `table`
-- Mart/reporting = `view`
+- **[Superset dashboard](https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3):** presents transaction health, customer health, product activation, finance KPIs, growth, risk, and pipeline health.
+- **[Mixpanel board](https://mixpanel.com/project/4027714/view/4523900/app/boards/#id=11229807):** supports event tracking, funnels, activation analysis, and product behavior exploration.
+- **[dbt Docs](https://dbt-finsight.iamrad.info/#!/overview):** provides model documentation and transformation visibility.
+- **[Portfolio website](https://finsight.iamrad.info/):** connects the public project surfaces for recruiters and reviewers.
+- **Airflow and Dagster:** remain protected orchestration and lineage surfaces. They demonstrate operational DAG design, dbt asset visibility, retries, logs, and monitoring patterns without exposing private administration endpoints.
 
-## Operational observability and alerting
-- Airflow operational runs include retry behavior, task logs, and email alerts for monitoring workflow health.
-- Airflow Gmail SMTP delivery was tested successfully, with logs confirming alert dispatch.
-- Dagster is used as an orchestration observability layer for dbt assets, lineage, scheduled execution, and monitoring context.
-- Dagster alerting setup is documented as an internal orchestration monitoring capability, not a public feature endpoint.
-- SMTP and notification credentials should be managed securely, preferably via Airflow connection or secret management patterns, not hardcoded configuration.
+## Screenshot Gallery
 
-## Security notes
-- No secrets are committed to the repository.
-- No `.env` files are committed.
-- No Neon credentials are committed.
-- No Mixpanel secrets are committed.
-- No SMTP credentials are committed.
-- UI access is protected with Basic Auth where applicable.
+There are currently no screenshot image or GIF files checked into this repository, so the README does not embed placeholder paths. The public project surfaces can be reviewed directly through the live links below; protected Airflow and Dagster surfaces are intentionally described without public access links.
 
-## Repository structure
+| View | Review Link | Access |
+| --- | --- | --- |
+| Project website | [Open website](https://finsight.iamrad.info/) | Public |
+| Architecture page | [Open architecture page](https://finsight.iamrad.info/architecture.html) | Public |
+| Superset dashboard | [Open Superset dashboard](https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3) | Public |
+| dbt Docs | [Open dbt Docs](https://dbt-finsight.iamrad.info/#!/overview) | Public |
+| Mixpanel product analytics | [Open Mixpanel board](https://mixpanel.com/project/4027714/view/4523900/app/boards/#id=11229807) | Public link |
+| GitHub Actions workflows | [Open Actions](https://github.com/tousiftr/finsight-ae/actions) | Public repository surface |
+| Airflow DAGs | See [`airflow/dags/`](airflow/dags/) | Protected runtime surface |
+| Dagster lineage | See [`dagster_project/`](dagster_project/) | Protected runtime surface |
+
+## Pipeline Schedule
+
+The portfolio pipeline is designed around four daily reporting checkpoints in Bangladesh time (UTC+06:00):
+
+- 02:00 AM Bangladesh time
+- 08:00 AM Bangladesh time
+- 02:00 PM Bangladesh time
+- 08:00 PM Bangladesh time
+
+GitHub Actions is used for scheduled automation, while Airflow is used for orchestration learning and operational DAG design. The repository also includes a higher-frequency live-ingest workflow for demonstration data and separate dbt workflows, allowing raw ingestion and model refresh tasks to run at different cadences.
+
+## Operational Observability
+
+- Airflow operational workflows include retry behavior, task logs, and alerting patterns for workflow health.
+- Airflow includes Mixpanel sync orchestration for the product analytics activation path.
+- Dagster provides dbt asset visibility, lineage, source freshness, snapshots, model runs, tests, and orchestration context.
+- Mixpanel sync outcomes are tracked through metadata logging.
+- Caddy fronts VM-hosted services with SSL termination and protected access controls where applicable.
+
+## Repository Structure
+
 ```text
 .
-├── data_generator/                  # Synthetic/source-like batch generation
-├── object_storage/                  # R2 upload and manifest helpers
-├── loaders/                         # Raw table DDL and load/verify scripts
-├── product_analytics/               # Mixpanel sync logic
-├── scripts/                         # Local/ops helper scripts
-├── airflow/                         # Airflow DAGs + deployment assets
-├── dagster_project/                 # Dagster definitions and jobs
-├── dbt_fintech/
-│   ├── models/
-│   │   ├── sources/                 # source() declarations for raw schema
-│   │   ├── staging/                 # stg_* source-cleaned views
-│   │   ├── intermediate/            # int_* trusted business truth tables
-│   │   └── mart/report/             # reporting views: mrt_rp_<dept>_<model>
-│   ├── snapshots/
-│   ├── tests/                       # custom dbt tests
-│   ├── macros/
-│   └── profiles.yml.example
-└── docs/                            # runbooks, architecture, milestones, next steps
+├── .github/workflows/       # Scheduled automation, dbt docs deployment, and secret scanning
+├── airflow/                 # Airflow deployment assets and operational DAGs
+├── dagster_project/         # Dagster definitions for dbt-oriented orchestration and lineage
+├── data_generator/          # Synthetic fintech batch generation
+├── dbt_fintech/             # dbt sources, staging, intermediate, marts, seeds, snapshots, and tests
+├── docs/                    # Architecture notes, runbooks, definitions, and deployment handoffs
+├── loaders/                 # Raw table DDL and load/verification helpers
+├── object_storage/          # Cloudflare R2 upload and manifest helpers
+├── product_analytics/       # Neon-to-Mixpanel sync logic
+├── scripts/                 # Local and operational pipeline helpers
+├── sql/                     # Validation and raw storage diagnostics
+├── superset/                # Superset container assets
+├── architecture.html        # Public architecture page
+├── dashboards.html          # Public dashboard links page
+└── index.html               # Public project landing page
 ```
 
-## Next steps
-- Finish README and docs cleanup so all documentation reflects current implemented orchestration state.
-- Add screenshots for Airflow, Dagster, Mixpanel, and end-to-end pipeline status.
-- Build BI/dashboard consumption from the current mart layer.
-- Add a pipeline health dashboard for operations visibility.
-- Expand automated data quality checks.
-- Add failure and SLA alert documentation.
-- Later, add a Cube semantic layer.
-- Later, add an AI assistant layer.
+## How to Read This Project
 
-## Documentation sync note
-Some docs may still reflect earlier planning-state language for Airflow or Dagster. README now reflects the implemented state, and remaining docs should be synchronized in a follow-up documentation pass.
+If you are reviewing this as a portfolio case study:
+
+1. Start with the [live website](https://finsight.iamrad.info/).
+2. Review the [architecture page](https://finsight.iamrad.info/architecture.html).
+3. Open the [Superset dashboard](https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3).
+4. Open [dbt Docs](https://dbt-finsight.iamrad.info/#!/overview) to inspect the transformation layer.
+5. Review the repository structure, especially [`dbt_fintech/`](dbt_fintech/), [`.github/workflows/`](.github/workflows/), [`airflow/`](airflow/), and [`dagster_project/`](dagster_project/).
+6. Use the screenshot gallery links above to review GitHub Actions and Mixpanel; Airflow and Dagster remain protected operational surfaces.
+
+## Security and Access Notes
+
+- **Public:** portfolio website, architecture page, dbt Docs, Superset dashboard, GitHub repository, and selected public analytics links.
+- **Protected/private:** Airflow, Dagster, credentials, `.env` files, infrastructure secrets, database credentials, notification credentials, and administrative service access.
+- Example environment and dbt profile files document configuration shape only. Secret values are not included in this README and should not be committed to the repository.
+
+## What I Learned
+
+- Designing an end-to-end analytics engineering platform
+- Building dbt models for reusable reporting layers
+- Creating dashboard-ready marts and KPI definitions
+- Connecting BI and product analytics surfaces
+- Documenting data lineage and pipeline behavior
+- Managing public portfolio links while keeping operational tools protected
+
+## Next Improvements
+
+- Add a Cube semantic layer for governed metrics
+- Add anomaly detection and AI-generated dashboard summaries
+- Improve data quality monitoring
+- Add a richer metric dictionary
+- Add more lineage screenshots and pipeline status reporting
+- Improve CI/CD validation around dbt builds
+
+## Portfolio
+
+This project is part of my analytics engineering portfolio. The live project is available at [https://finsight.iamrad.info/](https://finsight.iamrad.info/) and my main portfolio is available at [https://iamrad.info](https://iamrad.info).
