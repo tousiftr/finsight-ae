@@ -11,6 +11,8 @@ A portfolio analytics engineering platform simulating fintech transactions, onbo
 [![GitHub Actions](https://img.shields.io/badge/GitHub-Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/tousiftr/finsight-ae/actions)
 [![Portfolio Live](https://img.shields.io/badge/Portfolio-Live-16A34A)](https://finsight.iamrad.info/)
 
+> **Highlighted portfolio links:** **[iamrad.info](https://iamrad.info/?utm_source=github)** · **[fintech.iamrad.info](https://fintech.iamrad.info/?utm_source=github)**
+
 ## Live Project Links
 
 | Surface | Link |
@@ -20,7 +22,8 @@ A portfolio analytics engineering platform simulating fintech transactions, onbo
 | dbt Docs | [dbt-finsight.iamrad.info](https://dbt-finsight.iamrad.info/#!/overview) |
 | Superset Dashboard | [Open the live dashboard](https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3) |
 | Mixpanel Product Analytics | [Open the Mixpanel board](https://mixpanel.com/project/4027714/view/4523900/app/boards/#id=11229807) |
-| Main Portfolio | [iamrad.info](https://iamrad.info) |
+| Main Portfolio | **[iamrad.info](https://iamrad.info/?utm_source=github)** |
+| Fintech Portfolio | **[fintech.iamrad.info](https://fintech.iamrad.info/?utm_source=github)** |
 | GitHub Repository | [github.com/tousiftr/finsight-ae](https://github.com/tousiftr/finsight-ae) |
 
 ## Project Overview
@@ -68,7 +71,7 @@ The primary data path is **generate → land → load → model → activate**. 
 - Scheduled automation using GitHub Actions
 - Orchestration practice using Airflow
 - Lineage and asset graph practice using Dagster
-- Portfolio publishing through [iamrad.info](https://iamrad.info)
+- Portfolio publishing through [iamrad.info](https://iamrad.info/?utm_source=github)
 
 ## Tech Stack
 
@@ -269,4 +272,4 @@ If you are reviewing this as a portfolio case study:
 
 ## Portfolio
 
-This project is part of my analytics engineering portfolio. The live project is available at [https://finsight.iamrad.info/](https://finsight.iamrad.info/) and my main portfolio is available at [https://iamrad.info](https://iamrad.info).
+This project is part of my analytics engineering portfolio. The live project is available at [https://finsight.iamrad.info/](https://finsight.iamrad.info/) and my main portfolio is available at [https://iamrad.info](https://iamrad.info/?utm_source=github).
