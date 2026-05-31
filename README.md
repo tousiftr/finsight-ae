@@ -138,7 +138,9 @@ The dbt models are designed around clean business entities, reusable transformat
 
 ## Screenshot Gallery
 
-There are currently no screenshot image or GIF files checked into this repository, so the README does not embed placeholder paths. The public project surfaces can be reviewed directly through the live links below; protected Airflow and Dagster surfaces are intentionally described without public access links.
+The checked-in screenshots provide a quick visual walkthrough of the platform. Public surfaces can also be opened through the live links above. Airflow and Dagster remain protected operational surfaces, so the GIFs below provide reviewable proof without exposing administration endpoints.
+
+### Review links
 
 | View | Review Link | Access |
 | --- | --- | --- |
@@ -150,6 +152,44 @@ There are currently no screenshot image or GIF files checked into this repositor
 | GitHub Actions workflows | [Open Actions](https://github.com/tousiftr/finsight-ae/actions) | Public repository surface |
 | Airflow DAGs | See [`airflow/dags/`](airflow/dags/) | Protected runtime surface |
 | Dagster lineage | See [`dagster_project/`](dagster_project/) | Protected runtime surface |
+
+### Data architecture
+
+![FinSight data architecture](screenshots/data-architecture.png)
+
+### Superset dashboard
+
+The Superset dashboard presents the executive and operational KPI layer, including transaction health, customer health, product activation, growth, risk, and pipeline monitoring.
+
+![Superset dashboard walkthrough](screenshots/super.gif)
+
+### Mixpanel product analytics
+
+Mixpanel provides product event analysis, activation metrics, funnels, and behavior exploration.
+
+![Mixpanel product analytics walkthrough](screenshots/maxplane.gif)
+
+### dbt Docs and lineage
+
+The dbt documentation catalog exposes model-level metadata, while the lineage graph shows how transformations move from source data to analytics-ready models.
+
+![dbt Docs walkthrough](screenshots/doc.gif)
+
+![dbt lineage graph](screenshots/dbt-dag.png)
+
+### GitHub Actions automation
+
+GitHub Actions runs the scheduled pipeline workflows and repository-level automation.
+
+![GitHub Actions workflow walkthrough](screenshots/githubaction.gif)
+
+### Protected orchestration surfaces
+
+Airflow demonstrates operational DAG scheduling, retries, logs, and workflow monitoring. Dagster demonstrates dbt-oriented asset visibility, lineage, and orchestration context.
+
+![Airflow DAG walkthrough](screenshots/airflow.gif)
+
+![Dagster asset graph walkthrough](screenshots/dagster.gif)
 
 ## Pipeline Schedule
 
@@ -184,6 +224,7 @@ GitHub Actions is used for scheduled automation, while Airflow is used for orche
 ├── object_storage/          # Cloudflare R2 upload and manifest helpers
 ├── product_analytics/       # Neon-to-Mixpanel sync logic
 ├── scripts/                 # Local and operational pipeline helpers
+├── screenshots/             # Architecture, analytics, automation, and orchestration visuals
 ├── sql/                     # Validation and raw storage diagnostics
 ├── superset/                # Superset container assets
 ├── architecture.html        # Public architecture page
@@ -200,7 +241,7 @@ If you are reviewing this as a portfolio case study:
 3. Open the [Superset dashboard](https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3).
 4. Open [dbt Docs](https://dbt-finsight.iamrad.info/#!/overview) to inspect the transformation layer.
 5. Review the repository structure, especially [`dbt_fintech/`](dbt_fintech/), [`.github/workflows/`](.github/workflows/), [`airflow/`](airflow/), and [`dagster_project/`](dagster_project/).
-6. Use the screenshot gallery links above to review GitHub Actions and Mixpanel; Airflow and Dagster remain protected operational surfaces.
+6. Use the embedded screenshot gallery above to review the architecture, analytics, automation, and protected orchestration surfaces.
 
 ## Security and Access Notes
 
