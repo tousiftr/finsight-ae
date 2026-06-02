@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "dbt_fintech/**"
+      - "requirements-dbt.txt"
       - ".github/workflows/deploy-dbt-docs.yml"
   workflow_dispatch:
 
@@ -44,10 +45,18 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install dbt dependencies
+      - name: Install pinned dbt dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install dbt-postgres
+          pip install -r requirements-dbt.txt
+          dbt --version
+          python - <<'PY'
+          import dbt.version
+          version = dbt.version.__version__
+          print("Installed dbt version:", version)
+          if version.startswith("2."):
+              raise SystemExit("dbt Core v2 / Fusion is not supported for this Postgres project yet")
+          PY
 
       - name: Validate required dbt secrets
         run: |
