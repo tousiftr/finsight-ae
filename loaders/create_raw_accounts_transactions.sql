@@ -19,12 +19,6 @@ on raw.raw_accounts (source_object_key, raw_record_hash);
 create index if not exists ix_raw_accounts_dt_batch_id
 on raw.raw_accounts (dt, batch_id);
 
-create index if not exists ix_raw_accounts_source_object_key
-on raw.raw_accounts (source_object_key);
-
-create index if not exists ix_raw_accounts_payload_gin
-on raw.raw_accounts using gin (payload);
-
 
 create table if not exists raw.raw_transactions (
     id bigserial primary key,
@@ -44,9 +38,3 @@ on raw.raw_transactions (source_object_key, raw_record_hash);
 
 create index if not exists ix_raw_transactions_dt_batch_id
 on raw.raw_transactions (dt, batch_id);
-
-create index if not exists ix_raw_transactions_source_object_key
-on raw.raw_transactions (source_object_key);
-
-create index if not exists ix_raw_transactions_payload_gin
-on raw.raw_transactions using gin (payload);

@@ -26,6 +26,16 @@ where n.nspname = 'raw'
   and c.relkind in ('r', 'p')
 order by pg_total_relation_size(c.oid) desc;
 
+-- 2b) Largest raw indexes. This helps confirm storage-heavy indexes were removed.
+select
+    schemaname as schema_name,
+    tablename as table_name,
+    indexname as index_name,
+    pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+from pg_stat_user_indexes
+where schemaname = 'raw'
+order by pg_relation_size(indexrelid) desc;
+
 -- 3) Row counts by batch_id for every raw table.
 select *
 from (

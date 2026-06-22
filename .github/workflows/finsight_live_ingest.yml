@@ -3,7 +3,7 @@ name: FinSight Live Ingest
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/20 * * * *"
+    - cron: "0 * * * *"
 
 concurrency:
   group: finsight-live-ingest
@@ -73,17 +73,17 @@ jobs:
         run: |
           python data_generator/main.py \
             --customer-min 1 \
-            --customer-max 8 \
+            --customer-max 3 \
             --merchant-min 0 \
-            --merchant-max 2 \
-            --transaction-min 30 \
-            --transaction-max 120 \
-            --event-min 150 \
-            --event-max 700 \
+            --merchant-max 1 \
+            --transaction-min 8 \
+            --transaction-max 35 \
+            --event-min 30 \
+            --event-max 120 \
             --output-dir "$RAW_OUTPUT_DIR"
 
       - name: Load generated batch into Neon raw tables
-        run: python scripts/load_local_raw_to_neon.py --raw-root "$RAW_OUTPUT_DIR"
+        run: python scripts/load_local_raw_to_neon.py --raw-root "$RAW_OUTPUT_DIR" --chunk-size 50
 
       - name: Validate dbt connection
         working-directory: dbt_fintech
@@ -96,3 +96,6 @@ jobs:
       - name: Run dbt staging models and tests only
         working-directory: dbt_fintech
         run: dbt build --profiles-dir . --select path:models/staging
+
+      - name: Enforce Neon raw retention
+        run: python scripts/cleanup_neon_raw_retention.py --batch-size 1000

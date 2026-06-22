@@ -141,20 +141,6 @@ def ensure_raw_table(conn) -> None:
             """
         )
 
-        cursor.execute(
-            f"""
-            create index if not exists ix_{RAW_TABLE_NAME}_source_object_key
-            on {RAW_TABLE} (source_object_key);
-            """
-        )
-
-        cursor.execute(
-            f"""
-            create index if not exists ix_{RAW_TABLE_NAME}_payload_gin
-            on {RAW_TABLE} using gin (payload);
-            """
-        )
-
         conn.commit()
 
     finally:

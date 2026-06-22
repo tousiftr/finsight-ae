@@ -83,6 +83,12 @@ If R2 upload is not needed locally, skip the upload step and load Neon directly:
 python scripts/load_local_raw_to_neon.py --raw-root data/raw
 ```
 
+Use a smaller database transaction size on the Neon free tier:
+
+```powershell
+python scripts/load_local_raw_to_neon.py --raw-root data/raw --chunk-size 50
+```
+
 ## Domain-scoped commands
 
 Load one local raw domain into Neon:
@@ -166,6 +172,17 @@ Preview rows that would be deleted:
 python scripts/cleanup_neon_raw_retention.py --dry-run
 ```
 
+Use bounded delete transactions when storage is tight:
+
+```powershell
+python scripts/cleanup_neon_raw_retention.py --batch-size 1000
+```
+
+`scripts/apply_raw_ddl.py` also drops old broad JSONB GIN indexes on raw customer,
+account, and transaction payloads. Those indexes are expensive on small Neon plans; keep
+R2 as the immutable raw archive and use the lean raw tables for recent operational
+data only.
+
 Default retention windows:
 
 | Raw table | Retention |
@@ -179,13 +196,13 @@ Default retention windows:
 
 ## Seed batch versus scheduled live batches
 
-The clean seed batch can be relatively large because it is a one-time baseline reload. Scheduled live batches should stay small because Neon free storage is limited and raw rows are retained only for a short operational window.
+The clean seed batch can be relatively large because it is a one-time baseline reload. Scheduled live batches should stay small because Neon free storage is limited and raw rows are retained only for a short operational window. The GitHub live-ingest workflow now runs hourly and loads rows in smaller chunks.
 
 Suggested live batch sizes:
 
-- `customers`: 5 to 20
-- `accounts`: 5 to 40
-- `merchants`: 0 to 5
-- `transactions`: 100 to 300
-- `product_events`: 200 to 500
+- `customers`: 1 to 3
+- `accounts`: generated from the new customers only
+- `merchants`: 0 to 1
+- `transactions`: 8 to 35
+- `product_events`: 30 to 120
 - `kyc_applications`: only for new customers
