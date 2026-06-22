@@ -72,6 +72,12 @@ def parse_args() -> argparse.Namespace:
         choices=sorted(DOMAIN_CONFIGS),
         help="Optional single domain to load. Omit to load all supported domains.",
     )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=100,
+        help="Rows to insert before committing. Smaller chunks reduce Neon transaction size.",
+    )
     return parser.parse_args()
 
 
@@ -112,7 +118,17 @@ def source_object_key(raw_root: Path, path: Path) -> str:
     return path.relative_to(raw_root).as_posix()
 
 
-def insert_file(conn, config: DomainConfig, raw_root: Path, path: Path, bucket: str) -> tuple[int, int]:
+def insert_file(
+    conn,
+    config: DomainConfig,
+    raw_root: Path,
+    path: Path,
+    bucket: str,
+    chunk_size: int,
+) -> tuple[int, int]:
+    if chunk_size < 1:
+        raise ValueError("--chunk-size must be at least 1")
+
     batch_id = partition_value(path.parent.name, "batch_id=")
     dt = partition_value(path.parent.parent.name, "dt=")
     object_key = source_object_key(raw_root, path)
@@ -146,32 +162,42 @@ def insert_file(conn, config: DomainConfig, raw_root: Path, path: Path, bucket: 
     inserted = 0
     cursor = conn.cursor()
     try:
-        for payload in payloads:
-            business_id = str(payload[config.payload_id_field])
-            values: list[str] = []
-            for column in columns:
-                if column == config.raw_id_column:
-                    values.append(business_id)
-                elif column == config.customer_id_column:
-                    values.append(business_id)
-                elif column == "payload":
-                    values.append(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
-                elif column == "source_bucket":
-                    values.append(bucket)
-                elif column == "source_object_key":
-                    values.append(object_key)
-                elif column == "source_file_path":
-                    values.append(source_file_path)
-                elif column == "dt":
-                    values.append(dt)
-                elif column == "batch_id":
-                    values.append(batch_id)
-                elif column == "raw_record_hash":
-                    values.append(canonical_hash(payload))
-                else:
-                    raise ValueError(f"Unexpected insert column: {column}")
-            cursor.execute(sql, tuple(values))
-            inserted += max(int(cursor.rowcount or 0), 0)
+        for start_index in range(0, len(payloads), chunk_size):
+            chunk = payloads[start_index:start_index + chunk_size]
+
+            for payload in chunk:
+                business_id = str(payload[config.payload_id_field])
+                values: list[str] = []
+                for column in columns:
+                    if column == config.raw_id_column:
+                        values.append(business_id)
+                    elif column == config.customer_id_column:
+                        values.append(business_id)
+                    elif column == "payload":
+                        values.append(json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
+                    elif column == "source_bucket":
+                        values.append(bucket)
+                    elif column == "source_object_key":
+                        values.append(object_key)
+                    elif column == "source_file_path":
+                        values.append(source_file_path)
+                    elif column == "dt":
+                        values.append(dt)
+                    elif column == "batch_id":
+                        values.append(batch_id)
+                    elif column == "raw_record_hash":
+                        values.append(canonical_hash(payload))
+                    else:
+                        raise ValueError(f"Unexpected insert column: {column}")
+                cursor.execute(sql, tuple(values))
+                inserted += max(int(cursor.rowcount or 0), 0)
+
+            conn.commit()
+            checked = min(start_index + len(chunk), len(payloads))
+            print(
+                f"{config.table_name}: committed chunk through row {checked} of {len(payloads)} "
+                f"for {object_key}"
+            )
     finally:
         cursor.close()
 
@@ -199,10 +225,16 @@ def main() -> None:
             config = DOMAIN_CONFIGS[domain]
             files = discover_files(raw_root, domain)
             for path in files:
-                candidates, inserted = insert_file(conn, config, raw_root, path, bucket)
+                candidates, inserted = insert_file(
+                    conn=conn,
+                    config=config,
+                    raw_root=raw_root,
+                    path=path,
+                    bucket=bucket,
+                    chunk_size=args.chunk_size,
+                )
                 total_candidates += candidates
                 total_inserted += inserted
-        conn.commit()
     except Exception:
         conn.rollback()
         raise

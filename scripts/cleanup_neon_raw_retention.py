@@ -42,6 +42,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip VACUUM ANALYZE after deletes.",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=5000,
+        help="Maximum expired rows to delete per committed transaction.",
+    )
     return parser.parse_args()
 
 
@@ -61,19 +67,41 @@ def count_expired(conn, rule: RawRetentionRule) -> int:
         cursor.close()
 
 
-def delete_expired(conn, rule: RawRetentionRule) -> int:
+def delete_expired_batch(conn, rule: RawRetentionRule, batch_size: int) -> int:
     cursor = conn.cursor()
     try:
         cursor.execute(
             f"""
-            delete from {rule.table_name}
-            where loaded_at < now() - (%s * interval '1 day');
+            with expired as (
+                select ctid
+                from {rule.table_name}
+                where loaded_at < now() - (%s * interval '1 day')
+                limit %s
+            )
+            delete from {rule.table_name} target
+            using expired
+            where target.ctid = expired.ctid;
             """,
-            (rule.retention_days,),
+            (rule.retention_days, batch_size),
         )
         return max(int(cursor.rowcount or 0), 0)
     finally:
         cursor.close()
+
+
+def delete_expired(conn, rule: RawRetentionRule, batch_size: int) -> int:
+    if batch_size < 1:
+        raise ValueError("--batch-size must be at least 1")
+
+    deleted_total = 0
+
+    while True:
+        deleted = delete_expired_batch(conn, rule, batch_size)
+        conn.commit()
+        deleted_total += deleted
+
+        if deleted < batch_size:
+            return deleted_total
 
 
 def vacuum_analyze(conn) -> None:
@@ -107,7 +135,7 @@ def main() -> None:
                 )
                 continue
 
-            deleted = delete_expired(conn, rule)
+            deleted = delete_expired(conn, rule, args.batch_size)
             total_deleted += deleted
             print(
                 f"{rule.table_name}: retention_days={rule.retention_days}, "
@@ -116,9 +144,9 @@ def main() -> None:
 
         if args.dry_run:
             conn.rollback()
+            print("Dry run complete; no rows deleted and no vacuum run.")
             return
 
-        conn.commit()
         print(f"Committed Neon raw retention cleanup; total rows deleted={total_deleted}")
 
         if total_deleted and not args.skip_vacuum_analyze:

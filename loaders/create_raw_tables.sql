@@ -195,3 +195,13 @@ create index if not exists idx_raw_kyc_applications_customer_id on raw.raw_kyc_a
 create index if not exists idx_raw_merchants_batch_id on raw.raw_merchants (batch_id);
 create index if not exists idx_raw_merchants_dt on raw.raw_merchants (dt);
 create index if not exists idx_raw_merchants_merchant_id on raw.raw_merchants (merchant_id);
+
+-- Free-tier storage guardrails:
+-- Older loader DDL created broad JSONB GIN indexes and duplicate source-object
+-- indexes on high-churn raw tables. The idempotency unique indexes already
+-- support source_object_key lookups, while dbt reads typed keys from payload.
+drop index if exists raw.ix_raw_accounts_payload_gin;
+drop index if exists raw.ix_raw_transactions_payload_gin;
+drop index if exists raw.idx_raw_customers_payload_gin;
+drop index if exists raw.ix_raw_accounts_source_object_key;
+drop index if exists raw.ix_raw_transactions_source_object_key;

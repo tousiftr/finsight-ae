@@ -30,9 +30,6 @@ create index if not exists idx_raw_customers_batch_id
 create index if not exists idx_raw_customers_dt
     on raw.raw_customers (dt);
 
-create index if not exists idx_raw_customers_payload_gin
-    on raw.raw_customers using gin (payload);
-
 create table if not exists raw.raw_ingestion_log (
     ingestion_log_id bigserial primary key,
 
