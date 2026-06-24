@@ -64,3 +64,8 @@ select
     ingested_at
 from ranked
 where rn = 1
+  and exists (
+      select 1
+      from {{ ref('stg_customers') }} as customers
+      where customers.customer_id = ranked.customer_id
+  )

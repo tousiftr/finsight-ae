@@ -51,3 +51,14 @@ select
     ingested_at
 from ranked
 where rn = 1
+  and exists (
+      select 1
+      from {{ ref('stg_accounts') }} as accounts
+      where accounts.account_id = ranked.account_id
+        and accounts.customer_id = ranked.customer_id
+  )
+  and exists (
+      select 1
+      from {{ ref('stg_customers') }} as customers
+      where customers.customer_id = ranked.customer_id
+  )
