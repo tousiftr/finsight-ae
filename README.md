@@ -23,7 +23,7 @@ A portfolio analytics engineering platform simulating fintech transactions, onbo
 | Superset Dashboard | [Open the live dashboard](https://dashboard.iamrad.info/superset/dashboard/2/?standalone=3) |
 | Mixpanel Product Analytics | [Open the Mixpanel board](https://mixpanel.com/project/4027714/view/4523900/app/boards/#id=11229807) |
 | Main Portfolio | **[iamrad.info](https://iamrad.info/?utm_source=github)** |
-| Fintech Portfolio | **[fintech.iamrad.info](https://fintech.iamrad.info/?utm_source=github)** |
+| Fintech Portfolio | **[fintech.iamrad.info](https://finsight.iamrad.info/?utm_source=github)** |
 | GitHub Repository | [github.com/tousiftr/finsight-ae](https://github.com/tousiftr/finsight-ae) |
 
 ## Project Overview
